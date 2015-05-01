@@ -22,7 +22,7 @@
 
 ;; remove menu bar and tool bar
 (menu-bar-mode -1)
-(tool-bar-mode -1)
+;; (tool-bar-mode -1)
 
 ;; force use spaces instead of tab
 (setq-default indent-tabs-mode nil)
