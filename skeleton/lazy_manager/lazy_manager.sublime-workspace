@@ -1,0 +1,629 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"permuta",
+				"permutation_r"
+			],
+			[
+				"First",
+				"FirstValue"
+			],
+			[
+				"get_re",
+				"get_record_count"
+			],
+			[
+				"re",
+				"rec	Record Directive"
+			],
+			[
+				"list_di",
+				"list_dir_r"
+			],
+			[
+				"list_dir",
+				"list_dir_r"
+			],
+			[
+				"list",
+				"list_dir_r"
+			],
+			[
+				"li",
+				"list_dir_r"
+			],
+			[
+				"file",
+				"filename"
+			],
+			[
+				"lis",
+				"list_dir_r"
+			],
+			[
+				"l",
+				"list_dir"
+			],
+			[
+				"Fi",
+				"FileName"
+			],
+			[
+				"sel",
+				"self"
+			],
+			[
+				"if",
+				"ifmain	if __name__ == '__main__'"
+			],
+			[
+				"add",
+				"addr"
+			],
+			[
+				"zb",
+				"zb_dev_state_active"
+			],
+			[
+				"buf",
+				"buf_"
+			],
+			[
+				"item",
+				"items_"
+			],
+			[
+				"ZZ",
+				"ZZBGetReq"
+			],
+			[
+				"enco",
+				"encode_len"
+			],
+			[
+				"seri",
+				"serial_dev"
+			],
+			[
+				"seria",
+				"serial_dev_"
+			],
+			[
+				"z_en",
+				"z_encode_integer16"
+			],
+			[
+				"dev_ad",
+				"dev_addr_"
+			],
+			[
+				"zb_dev_li",
+				"zb_dev_list_"
+			],
+			[
+				"zb_de",
+				"zb_dev_list_"
+			],
+			[
+				"zb_dev",
+				"zb_dev_list_"
+			],
+			[
+				"deco",
+				"decode_len"
+			],
+			[
+				"ZInn",
+				"ZInnerGetDevInfoReq"
+			],
+			[
+				"json_ar",
+				"json_array"
+			],
+			[
+				"json_obj",
+				"json_object_get"
+			],
+			[
+				"json",
+				"json_array"
+			],
+			[
+				"dev",
+				"dev_id"
+			],
+			[
+				"json_inte",
+				"json_integer_value"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "prac.erl",
+			"settings":
+			{
+				"buffer_size": 680,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"command_palette":
+	{
+		"height": 347.0,
+		"selected_items":
+		[
+			[
+				"package",
+				"Package Control: Upgrade/Overwrite All Packages"
+			]
+		],
+		"width": 449.0
+	},
+	"console":
+	{
+		"height": 125.0
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/Volumes/Data/workspaces/lazy_manager/prac.erl",
+		"/Volumes/Data/workspaces/lazy_manager/db.hrl",
+		"/Volumes/Data/workspaces/lazy_manager/lm.erl",
+		"/Volumes/Data/workspaces/lazy_manager/db.erl",
+		"/Volumes/Data/workspaces/lazy_manager/eredis/src/eredis.erl",
+		"/Volumes/Data/workspaces/lazy_manager/lazy_manager.erl",
+		"/Volumes/Data/workspaces/lazy_manager/lazy_manager.py",
+		"/Users/zero/Library/Application Support/Sublime Text 2/Packages/User/Default (OSX).sublime-keymap",
+		"/Users/zero/Library/Application Support/Sublime Text 2/Packages/Default/Default (OSX).sublime-keymap",
+		"/Volumes/Data/workspaces/lazy_manager/lazy_manager.cc",
+		"/Volumes/Data/workspaces/lazy_manager/Makefile",
+		"/Volumes/Data/workspaces/monsys/libmonsys/main.c",
+		"/Volumes/Data/workspaces/monsys/server/zzigbee_handler.h",
+		"/Volumes/Data/workspaces/monsys/server/zzigbee_handler.cc",
+		"/Volumes/Data/workspaces/monsys/server/zmsg.h",
+		"/Volumes/Data/workspaces/monsys/server/zzigbee_message.cc",
+		"/Volumes/Data/workspaces/monsys/server/zzigbee_message.h",
+		"/Volumes/Data/workspaces/monsys/server/zserial.h",
+		"/Volumes/Data/workspaces/monsys/server/zserial.cc",
+		"/Volumes/Data/workspaces/monsys/server/zinner_message.h",
+		"/Volumes/Data/workspaces/monsys/web/nginx-1.2.6/html/mon_sys.html",
+		"/Volumes/Data/workspaces/monsys/server/zhandler.h",
+		"/Volumes/Data/workspaces/monsys/server/zclient_handler.h",
+		"/Volumes/Data/workspaces/monsys/server/zapi_module.cc",
+		"/Volumes/Data/workspaces/monsys/server/zmon_message.cc",
+		"/Volumes/Data/workspaces/monsys/server/zmon_message.h",
+		"/Volumes/Data/workspaces/monsys/server/zwebapi_handler.cc",
+		"/Volumes/Data/workspaces/monsys/web/nginx-1.2.6/html/mon_sys.js",
+		"/Volumes/Data/workspaces/monsys/server/zdispatcher.cc",
+		"/Volumes/Data/workspaces/monsys/server/zdispatcher.h",
+		"/Users/zero/Library/Application Support/Sublime Text 2/Packages/Default/Preferences.sublime-settings"
+	],
+	"find":
+	{
+		"height": 35.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"p",
+			"permutation",
+			"Conditions",
+			"match_column",
+			"filter",
+			"Record",
+			"list_dir_r",
+			"FileName",
+			"filename",
+			"FileName",
+			"page",
+			"ctrl+v",
+			"rsp",
+			"serial",
+			"genDevAddr",
+			"zbip",
+			"req",
+			"addr_",
+			"processMsg",
+			"page",
+			"buf",
+			"Encode",
+			"encode",
+			"sendMsg",
+			"processMsg",
+			"unkn",
+			"uid is i",
+			"\n	",
+			"good",
+			"dev_id",
+			"juid",
+			"uid",
+			"asd",
+			"just",
+			"asd",
+			"ll",
+			" a tes",
+			"hello",
+			"hel",
+			"hello"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "prac.erl",
+					"settings":
+					{
+						"buffer_size": 680,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								432,
+								432
+							]
+						],
+						"settings":
+						{
+							"codeintel": true,
+							"codeintel_config":
+							{
+								"JavaScript":
+								{
+									"codeintel_max_recursive_dir_depth": 2.0,
+									"codeintel_scan_files_in_project": false,
+									"javascriptExtraPaths":
+									[
+									]
+								},
+								"PHP":
+								{
+									"codeintel_max_recursive_dir_depth": 5.0,
+									"codeintel_scan_files_in_project": false,
+									"phpExtraPaths":
+									[
+									]
+								},
+								"Python":
+								{
+									"env":
+									{
+									}
+								}
+							},
+							"codeintel_enabled_languages":
+							[
+								"JavaScript",
+								"Mason",
+								"XBL",
+								"XUL",
+								"RHTML",
+								"SCSS",
+								"Python",
+								"HTML",
+								"Ruby",
+								"Python3",
+								"XML",
+								"Sass",
+								"XSLT",
+								"Django",
+								"HTML5",
+								"Perl",
+								"CSS",
+								"Twig",
+								"Less",
+								"Smarty",
+								"Node.js",
+								"Tcl",
+								"TemplateToolkit",
+								"PHP"
+							],
+							"codeintel_live": true,
+							"codeintel_live_enabled_languages":
+							[
+								"JavaScript",
+								"Mason",
+								"XBL",
+								"XUL",
+								"RHTML",
+								"SCSS",
+								"Python",
+								"HTML",
+								"Ruby",
+								"Python3",
+								"XML",
+								"Sass",
+								"XSLT",
+								"Django",
+								"HTML5",
+								"Perl",
+								"CSS",
+								"Twig",
+								"Less",
+								"Smarty",
+								"Node.js",
+								"Tcl",
+								"TemplateToolkit",
+								"PHP"
+							],
+							"codeintel_max_recursive_dir_depth": 10.0,
+							"codeintel_scan_exclude_dir":
+							{
+								"JavaScript":
+								[
+									"/build/",
+									"/min/"
+								]
+							},
+							"codeintel_scan_files_in_project": true,
+							"codeintel_selected_catalogs":
+							[
+								"PyWin32",
+								"jQuery",
+								"Rails"
+							],
+							"codeintel_snippets": true,
+							"codeintel_syntax_map":
+							{
+								"Python Django": "Python"
+							},
+							"codeintel_tooltips": "popup",
+							"sublime_auto_complete": true,
+							"syntax": "Packages/Erlang/Erlang.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.clang":
+	{
+		"height": 112.0
+	},
+	"replace":
+	{
+		"height": 64.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+			[
+				"lm.er",
+				"lm.erl"
+			],
+			[
+				"eredis",
+				"eredis/src/eredis.erl"
+			],
+			[
+				"lazyerl",
+				"lazy_manager.erl"
+			],
+			[
+				"mak",
+				"Makefile"
+			],
+			[
+				"zzi",
+				"server/zzigbee_handler.h"
+			],
+			[
+				"zigbee",
+				"server/zzigbee_message.cc"
+			],
+			[
+				"zigbeemes",
+				"server/zzigbee_message.h"
+			],
+			[
+				"zserial",
+				"server/zserial.cc"
+			],
+			[
+				"main",
+				"server/main.cc"
+			],
+			[
+				"zserialh",
+				"server/zserial.h"
+			],
+			[
+				"serial",
+				"server/zserial.cc"
+			],
+			[
+				"zmsg.h",
+				"server/zmsg.h"
+			],
+			[
+				"zigbeecc",
+				"server/zzigbee_message.cc"
+			],
+			[
+				"zzigbee",
+				"server/zzigbee_handler.cc"
+			],
+			[
+				"mon_syshtml",
+				"web/nginx-1.2.6/html/mon_sys.html"
+			],
+			[
+				"zinn",
+				"server/zinner_message.h"
+			],
+			[
+				"zigbeemessage",
+				"server/zzigbee_message.cc"
+			],
+			[
+				"zmon",
+				"server/zmon_message.cc"
+			],
+			[
+				"zzigbee_mess",
+				"server/zzigbee_message.cc"
+			],
+			[
+				"zmon_messh",
+				"server/zmon_message.h"
+			],
+			[
+				"zmon_",
+				"server/zmon_message.cc"
+			],
+			[
+				"zmon_mess",
+				"server/zmon_message.cc"
+			],
+			[
+				"zzigbee_handl",
+				"server/zzigbee_handler.h"
+			],
+			[
+				"zhand",
+				"server/zhandler.h"
+			],
+			[
+				"clienthan",
+				"server/zclient_handler.h"
+			],
+			[
+				"zz",
+				"server/zzigbee_message.h"
+			],
+			[
+				"zigbeeh",
+				"server/zzigbee_handler.h"
+			],
+			[
+				"zdis",
+				"server/zdispatcher.cc"
+			],
+			[
+				"zdish",
+				"server/zdispatcher.h"
+			],
+			[
+				"mon_sysh",
+				"web/nginx-1.2.6/html/mon_sys.html"
+			],
+			[
+				"mon_sysjs",
+				"web/nginx-1.2.6/html/mon_sys.js"
+			],
+			[
+				"webapi",
+				"server/zwebapi_handler.cc"
+			],
+			[
+				"webapic",
+				"server/zwebapi_handler.cc"
+			],
+			[
+				"as",
+				"just a test."
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"selected_items":
+		[
+			[
+				"",
+				"/Volumes/Data/workspaces/monsys/monsys.sublime-project"
+			]
+		],
+		"width": 380.0
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 235.0,
+	"status_bar_visible": true
+}
