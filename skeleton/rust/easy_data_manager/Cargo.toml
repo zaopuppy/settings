@@ -1,0 +1,4 @@
+[package]
+name = "easy_data_manager"
+version = "0.1.0"
+authors = ["Yi Zhao <zhaoyi.zero@gmail.com>"]
