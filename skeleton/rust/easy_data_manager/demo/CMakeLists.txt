@@ -13,6 +13,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 aux_source_directory(. SOURCE_FILES)
 
 add_executable(demo ${SOURCE_FILES})
-target_link_libraries (demo leveldb)
+target_link_libraries (demo leveldb boost_filesystem boost_system)
 
 
