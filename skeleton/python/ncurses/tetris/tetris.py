@@ -4,6 +4,46 @@ import curses
 import locale
 import random
 
+g_screen = None
+g_win1 = None
+g_rot = 0
+
+BLOCK_DATA = {
+    'O': (((1, 1, 0, 0), (1, 1, 0, 0), (1, 1, 0, 0), (1, 1, 0, 0)),
+          ((1, 1, 0, 0), (1, 1, 0, 0), (1, 1, 0, 0), (1, 1, 0, 0)),
+          ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0)),
+          ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))),
+    'J': (((2, 2, 2, 0), (0, 2, 0, 0), (2, 0, 0, 0), (2, 2, 0, 0)),
+          ((0, 0, 2, 0), (0, 2, 0, 0), (2, 2, 2, 0), (2, 0, 0, 0)),
+          ((0, 0, 0, 0), (2, 2, 0, 0), (0, 0, 0, 0), (2, 0, 0, 0)),
+          ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))),
+    'L': (((3, 3, 3, 0), (3, 3, 0, 0), (0, 0, 3, 0), (3, 0, 0, 0)),
+          ((3, 0, 0, 0), (0, 3, 0, 0), (3, 3, 3, 0), (3, 0, 0, 0)),
+          ((0, 0, 0, 0), (0, 3, 0, 0), (0, 0, 0, 0), (3, 3, 0, 0)),
+          ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))),
+    'Z': (((4, 4, 0, 0), (0, 4, 0, 0), (4, 4, 0, 0), (0, 4, 0, 0)),
+          ((0, 4, 4, 0), (4, 4, 0, 0), (0, 4, 4, 0), (4, 4, 0, 0)),
+          ((0, 0, 0, 0), (4, 0, 0, 0), (0, 0, 0, 0), (4, 0, 0, 0)),
+          ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))),
+    'S': (((0, 5, 5, 0), (5, 0, 0, 0), (0, 5, 5, 0), (5, 0, 0, 0)),
+          ((5, 5, 0, 0), (5, 5, 0, 0), (5, 5, 0, 0), (5, 5, 0, 0)),
+          ((0, 0, 0, 0), (0, 5, 0, 0), (0, 0, 0, 0), (0, 5, 0, 0)),
+          ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))),
+    'T': (((0, 6, 0, 0), (6, 0, 0, 0), (6, 6, 6, 0), (0, 6, 0, 0)),
+          ((6, 6, 6, 0), (6, 6, 0, 0), (0, 6, 0, 0), (6, 6, 0, 0)),
+          ((0, 0, 0, 0), (6, 0, 0, 0), (0, 0, 0, 0), (0, 6, 0, 0)),
+          ((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0))),
+    'I': (((7, 7, 7, 7), (7, 0, 0, 0), (7, 7, 7, 7), (7, 0, 0, 0)),
+          ((0, 0, 0, 0), (7, 0, 0, 0), (0, 0, 0, 0), (7, 0, 0, 0)),
+          ((0, 0, 0, 0), (7, 0, 0, 0), (0, 0, 0, 0), (7, 0, 0, 0)),
+          ((0, 0, 0, 0), (7, 0, 0, 0), (0, 0, 0, 0), (7, 0, 0, 0))),
+    }
+
+# rot = { 0, 1, 2, 3 }
+def get_data(name, rot):
+    groups = BLOCK_DATA.get(name)
+    return tuple(g[rot] for g in groups)
+
 
 def init():
     locale.setlocale(locale.LC_ALL, 'C')
@@ -37,46 +77,49 @@ def random_image(scr, width_start, width_end, height_start, height_end):
                 scr.addstr(r, c, '  ', curses.A_REVERSE)
 
 
-# I, J, L, O, T, Z, S
-#
-# I = ((1, 1, 1, 1),)
-#
-# J = ((1, 0, 0),
-#      (1, 1, 1))
-#
-# L = ((0, 0, 1),
-#      (1, 1, 1))
-#
-# O = ((1, 1),
-#      (1, 1))
-#
-# T = ((0, 1, 0),
-#      (1, 1, 1))
-#
-# Z = ((1, 1, 0),
-#      (0, 1, 1))
-#
-# S = ((0, 1, 1),
-#      (1, 1, 0))
-def draw(block):
-    pass
+def draw_block(scr, row, col, name, rot):
+    data = get_data(name, rot)
+    for r, line in enumerate(data):
+        for c, mark in enumerate(line):
+            if mark > 0:
+                scr.addstr(1+row+r, 1+col+c*2, '  ', curses.A_REVERSE)
+
+
+def draw():
+    g_screen.clear()
+    g_screen.border()
+    g_win1.border()
+    draw_block(g_screen, 0, 0, 'T', g_rot)
 
 
 def main():
-    scr = init()
+    global g_screen, g_rot
+    global g_win1
+
+    g_screen = init()
     try:
         # (55, 178), y = height, x = width
-        height, width = scr.getmaxyx()
+        height, width = g_screen.getmaxyx()
         height, width = height-1, width-1
-        # random_image(scr, width, height)
-        scr.border()
-        # random_image(scr, 1, width, 1, height)
+
+        g_win1 = curses.newwin(10, 10, 20, 20)
+        g_win1.refresh()
+
+        while True:
+            draw()
+            ch = g_screen.getch()
+            if ch == ord('q'):
+                break
+            elif ch == ord(' '):
+                _, g_rot = divmod(g_rot+1, 4)
     finally:
-        scr.getch()
-        clear_and_quit(scr);
+        clear_and_quit(g_screen);
 
 
 if __name__ == '__main__':
     main()
-
+    # while True:
+    #     name = input('name> ')
+    #     rot = input('rot> ')
+    #     print(get_data(name, int(rot)))
 
