@@ -92,7 +92,7 @@ def draw():
     draw_block(g_screen, 0, 0, 'T', g_rot)
 
 
-def main():
+def main_old():
     global g_screen, g_rot
     global g_win1
 
@@ -116,10 +116,31 @@ def main():
         clear_and_quit(g_screen);
 
 
+def main(stdscr):
+    global g_screen, g_rot
+    global g_win1
+
+    curses.curs_set(0)
+
+    g_screen = stdscr
+
+    # (55, 178), y = height, x = width
+    height, width = g_screen.getmaxyx()
+    height, width = height-1, width-1
+
+    g_win1 = curses.newwin(10, 10, 20, 20)
+    g_win1.refresh()
+
+    while True:
+        draw()
+        ch = g_screen.getch()
+        if ch == ord('q'):
+            break
+        elif ch == ord(' '):
+            _, g_rot = divmod(g_rot+1, 4)
+
+
 if __name__ == '__main__':
-    main()
-    # while True:
-    #     name = input('name> ')
-    #     rot = input('rot> ')
-    #     print(get_data(name, int(rot)))
+    curses.wrapper(main)
+
 
