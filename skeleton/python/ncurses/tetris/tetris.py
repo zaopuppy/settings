@@ -1,14 +1,30 @@
 #!/usr/bin/env python3
 
 import curses
-import locale
 import random
 from threading import Thread, RLock
 import time
+import sys
 
 
-# remember, `addstr` and `addch` are using different coordinates...
+# TODO: send log to a socket instead of a real file
+import socket
+try:
+    log_server_socket = socket.create_connection(('localhost', 1983), timeout=0.5)
+except ConnectionRefusedError:
+    log_server_socket = None
 
+
+def log(msg):
+    print(msg, file=sys.stderr)
+    if log_server_socket is not None:
+        log_server_socket.send(msg.encode('utf8') + b'\n')
+
+
+PLAYGROUND_WIDTH = 15
+PLAYGROUND_HEIGHT = 30
+
+BLOCK_NAME_LIST = ('O', 'J', 'L', 'Z', 'S', 'T', 'I',)
 
 BLOCK_DATA = {
     'O': (((1, 1, 0, 0), (1, 1, 0, 0), (1, 1, 0, 0), (1, 1, 0, 0)),
@@ -43,7 +59,7 @@ BLOCK_DATA = {
 
 
 # rot = { 0, 1, 2, 3 }
-def get_data(name, rot):
+def get_block_data(name, rot):
     return tuple(g[rot] for g in BLOCK_DATA.get(name))
 
 
@@ -51,11 +67,13 @@ def random_image(scr, width_start, width_end, height_start, height_end):
     for r in range(height_start, height_end):
         for c in range(width_start, width_end-2, 2):
             if random.randint(0, 1) == 1:
+                # remember
+                # `addstr` and `addch` are using different coordinates...
                 scr.addstr(r, c, '  ', curses.A_REVERSE)
 
 
 def draw_block(scr, row, col, name, rot):
-    data = get_data(name, rot)
+    data = get_block_data(name, rot)
     for r, line in enumerate(data):
         for c, mark in enumerate(line):
             if mark > 0:
@@ -85,21 +103,51 @@ class Playing:
             self.process_step_time_up(game)
 
     def process_step_time_up(self, game):
-        self.process_key(game, curses.KEY_DOWN)
+        pass
+        # self.process_key(game, curses.KEY_DOWN)
 
     def process_key(self, game, key):
-        if key == curses.KEY_UP:
-            game.cur_rot_ = (game.cur_rot_+1) % 4
-            game.need_redraw_ = True
-        elif key == curses.KEY_DOWN:
-            game.cur_pos_row_ += 1
-            game.need_redraw_ = True
-        elif key == curses.KEY_LEFT:
-            game.cur_pos_col_ -= 2
-            game.need_redraw_ = True
-        elif key == curses.KEY_RIGHT:
-            game.cur_pos_col_ += 2
-            game.need_redraw_ = True
+        if key == curses.KEY_UP or \
+                key == curses.KEY_DOWN or \
+                key == curses.KEY_LEFT or \
+                key == curses.KEY_RIGHT:
+            new_pos_row, new_pos_col, new_rot = 0, 0, 0
+            if key == curses.KEY_UP:
+                new_pos_row = game.cur_pos_row_
+                new_pos_col = game.cur_pos_col_
+                new_rot = (game.cur_rot_+1) % 4
+            elif key == curses.KEY_DOWN:
+                new_pos_row = game.cur_pos_row_ + 1
+                new_pos_col = game.cur_pos_col_
+                new_rot = game.cur_rot_
+            elif key == curses.KEY_LEFT:
+                new_pos_row = game.cur_pos_row_
+                new_pos_col = game.cur_pos_col_ - 1
+                new_rot = game.cur_rot_
+            elif key == curses.KEY_RIGHT:
+                new_pos_row = game.cur_pos_row_
+                new_pos_col = game.cur_pos_col_ + 1
+                new_rot = game.cur_rot_
+            if can_put(
+                    game.map_data_,
+                    new_pos_row, new_pos_col, game.cur_type_, new_rot):
+                log('row={}, col={}, type={}, rot={}'.format(
+                    new_pos_row, new_pos_col, game.cur_type_, new_rot
+                ))
+                game.cur_pos_row_ = new_pos_row
+                game.cur_pos_col_ = new_pos_col
+                game.cur_rot_ = new_rot
+                game.need_redraw_ = True
+            else:
+                if key == curses.KEY_DOWN:
+                    log('bottom touched, fix block and spawn a new one')
+                    put_block(
+                        game.map_data_,
+                        game.cur_pos_row_, game.cur_pos_col_,
+                        game.cur_type_, game.cur_rot_)
+                    check_full_row(game.map_data_)
+                    game.spawn_new_block()
+                    game.need_redraw_ = True
         elif key == ord('q'):
             game.stop_ = True
 
@@ -115,10 +163,10 @@ class CursesGame(Thread):
             args=(), kwargs=None, daemon=True)
 
         score_panel_width = 10+2
-        score_panel_height = 30
-        scene_width = 15*2 + 2
-        scene_height = 30
-        log_panel_height = 10
+        score_panel_height = PLAYGROUND_HEIGHT + 2
+        scene_width = PLAYGROUND_WIDTH*2 + 2
+        scene_height = PLAYGROUND_HEIGHT + 2
+        log_panel_height = 8+2
 
         self.main_screen_ = main_screen
         self.height_, self.width_ = main_screen.getmaxyx()
@@ -126,7 +174,11 @@ class CursesGame(Thread):
         min_height = max(scene_height, score_panel_height) + log_panel_height + 5
         min_width = score_panel_width + scene_width*2 + 5
         if self.height_ < min_height or self.width_ < min_width:
-            raise Exception('screen size should be {}*{} or larger'.format(min_width, min_height))
+            raise Exception('screen size must be {}*{} or larger'.format(min_width, min_height))
+
+        self.map_data_ = []
+        for r in range(PLAYGROUND_HEIGHT):
+            self.map_data_.append([0 for _ in range(PLAYGROUND_WIDTH)])
 
         self.stop_ = False
         self.fps_ = 0.0
@@ -138,8 +190,9 @@ class CursesGame(Thread):
         # for current active block
         self.cur_rot_ = 0
         self.cur_type_ = 'T'
-        self.cur_pos_row_ = 1
-        self.cur_pos_col_ = 10
+        self.cur_pos_row_ = 0
+        self.cur_pos_col_ = 6
+        self.spawn_new_block()
 
         # win1 -- player1
         win1_pos_row = 0
@@ -175,6 +228,12 @@ class CursesGame(Thread):
         # curses.cbreak()
         # self.main_screen.keypad(1)
 
+    def spawn_new_block(self):
+        self.cur_type_ = random.choice(BLOCK_NAME_LIST)
+        self.cur_rot_ = random.choice((0, 1, 2, 3))
+        self.cur_pos_row_ = 0
+        self.cur_pos_col_ = 6
+
     def run(self):
         delta = 0.0
         last_time = time.time()
@@ -209,15 +268,85 @@ class CursesGame(Thread):
             self.win2_.clear()
             self.win2_.border()
 
+            offset = 1
+
+            for r, line in enumerate(self.map_data_):
+                for c, mark in enumerate(line):
+                    if mark > 0:
+                        self.win1_.addstr(r+offset, c*2+offset, '  ', curses.A_REVERSE)
+
             draw_block(
                 self.win1_,
-                self.cur_pos_row_, self.cur_pos_col_,
+                self.cur_pos_row_+offset, self.cur_pos_col_*2+offset,
                 self.cur_type_, self.cur_rot_)
         finally:
             self.main_screen_.refresh()
             self.win1_.refresh()
             self.score_panel_.refresh()
             self.win2_.refresh()
+
+
+def in_map(row, col):
+    if row < 0 or row >= PLAYGROUND_HEIGHT:
+        return False
+    if col < 0 or col >= PLAYGROUND_WIDTH:
+        return False
+    return True
+
+
+def can_put(map_data, row, col, name, rot):
+    data = get_block_data(name, rot)
+    for r, line in enumerate(data):
+        for c, mark in enumerate(line):
+            if mark > 0:
+                if not in_map(row+r, col+c) or map_data[row+r][col+c] > 0:
+                    return False
+    return True
+
+
+def fall_map(map_data):
+    is_last_row_empty = False
+    for r in range(PLAYGROUND_HEIGHT-1, -1, -1):
+        if is_empty_row(map_data[r]):
+            # TODO
+            pass
+
+
+def check_full_row(map_data):
+    full_line_num = 0
+    for r, line in enumerate(map_data):
+        if is_full_row(line):
+            empty_row(line)
+            full_line_num += 1
+    fall_map(map_data)
+    return full_line_num
+
+
+def is_full_row(row):
+    for e in row:
+        if e == 0:
+            return False
+    return True
+
+
+def is_empty_row(row):
+    for e in row:
+        if e != 0:
+            return False
+    return True
+
+
+def empty_row(row):
+    for i in range(len(row)):
+        row[i] = 0
+
+
+def put_block(map_data, row, col, name, rot):
+    data = get_block_data(name, rot)
+    for r, line in enumerate(data):
+        for c, mark in enumerate(line):
+            if mark > 0:
+                map_data[row+r][col+c] = mark
 
 
 def main(screen):
@@ -228,6 +357,7 @@ def main(screen):
 
 
 if __name__ == '__main__':
+    log('just a test')
     curses.wrapper(main)
 
 # END
