@@ -8,6 +8,7 @@ import sys
 
 
 # TODO: send log to a socket instead of a real file
+# nc -kl 1983
 import socket
 try:
     log_server_socket = socket.create_connection(('localhost', 1983), timeout=0.5)
@@ -22,7 +23,7 @@ def log(msg):
 
 
 PLAYGROUND_WIDTH = 15
-PLAYGROUND_HEIGHT = 30
+PLAYGROUND_HEIGHT = 20
 
 BLOCK_NAME_LIST = ('O', 'J', 'L', 'Z', 'S', 'T', 'I',)
 
@@ -305,11 +306,16 @@ def can_put(map_data, row, col, name, rot):
 
 
 def fall_map(map_data):
-    is_last_row_empty = False
+    first_empty_row = -1
     for r in range(PLAYGROUND_HEIGHT-1, -1, -1):
-        if is_empty_row(map_data[r]):
-            # TODO
-            pass
+        if not is_empty_row(map_data[r]):
+            if first_empty_row >= 0:
+                # do move
+                map_data[first_empty_row], map_data[r] = map_data[r], map_data[first_empty_row]
+                first_empty_row -= 1
+        else:
+            if first_empty_row < 0:
+                first_empty_row = r
 
 
 def check_full_row(map_data):
