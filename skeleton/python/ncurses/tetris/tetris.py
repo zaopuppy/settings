@@ -5,6 +5,7 @@ import random
 from threading import Thread, RLock
 import time
 import sys
+import select
 
 
 # TODO: send log to a socket instead of a real file
@@ -114,18 +115,22 @@ class Playing:
                 key == curses.KEY_RIGHT:
             new_pos_row, new_pos_col, new_rot = 0, 0, 0
             if key == curses.KEY_UP:
+                game.user_log('UP')
                 new_pos_row = game.cur_pos_row_
                 new_pos_col = game.cur_pos_col_
                 new_rot = (game.cur_rot_+1) % 4
             elif key == curses.KEY_DOWN:
+                game.user_log('DOWN')
                 new_pos_row = game.cur_pos_row_ + 1
                 new_pos_col = game.cur_pos_col_
                 new_rot = game.cur_rot_
             elif key == curses.KEY_LEFT:
+                game.user_log('LEFT')
                 new_pos_row = game.cur_pos_row_
                 new_pos_col = game.cur_pos_col_ - 1
                 new_rot = game.cur_rot_
             elif key == curses.KEY_RIGHT:
+                game.user_log('RIGHT')
                 new_pos_row = game.cur_pos_row_
                 new_pos_col = game.cur_pos_col_ + 1
                 new_rot = game.cur_rot_
@@ -163,11 +168,14 @@ class CursesGame(Thread):
             name='curses-game',
             args=(), kwargs=None, daemon=True)
 
+        self.log_list_ = []
+        self.log_list_max_len_ = 6
+
         score_panel_width = 10+2
         score_panel_height = PLAYGROUND_HEIGHT + 2
         scene_width = PLAYGROUND_WIDTH*2 + 2
         scene_height = PLAYGROUND_HEIGHT + 2
-        log_panel_height = 8+2
+        log_panel_height = self.log_list_max_len_+2
 
         self.main_screen_ = main_screen
         self.height_, self.width_ = main_screen.getmaxyx()
@@ -222,12 +230,28 @@ class CursesGame(Thread):
             win2_height, win2_width,
             win2_pos_row, win2_pos_col)
 
+        # log_win
+        log_win_pos_row = max(scene_height, score_panel_height)
+        log_win_pos_col = 0
+        log_win_height = log_panel_height
+        log_win_width = scene_width*2 + score_panel_width + 2
+        self.log_win_ = curses.newwin(
+            log_win_height, log_win_width,
+            log_win_pos_row, log_win_pos_col
+        )
+
         self.state_ = Playing()
 
         # hide cursor
         curses.curs_set(0)
         # curses.cbreak()
         # self.main_screen.keypad(1)
+
+    def user_log(self, msg):
+        if len(self.log_list_) < self.log_list_max_len_:
+            self.log_list_.append(msg)
+        else:
+            self.log_list_ = self.log_list_[1:] + [msg]
 
     def spawn_new_block(self):
         self.cur_type_ = random.choice(BLOCK_NAME_LIST)
@@ -266,8 +290,10 @@ class CursesGame(Thread):
             self.win1_.border()
             self.score_panel_.clear()
             self.score_panel_.border()
-            self.win2_.clear()
-            self.win2_.border()
+            # self.win2_.clear()
+            # self.win2_.border()
+            self.log_win_.clear()
+            self.log_win_.border()
 
             offset = 1
 
@@ -280,11 +306,15 @@ class CursesGame(Thread):
                 self.win1_,
                 self.cur_pos_row_+offset, self.cur_pos_col_*2+offset,
                 self.cur_type_, self.cur_rot_)
+
+            for i in range(len(self.log_list_)):
+                self.log_win_.addstr(1+i, 1+0, self.log_list_[i])
         finally:
             self.main_screen_.refresh()
             self.win1_.refresh()
             self.score_panel_.refresh()
-            self.win2_.refresh()
+            # self.win2_.refresh()
+            self.log_win_.refresh()
 
 
 def in_map(row, col):
@@ -355,6 +385,49 @@ def put_block(map_data, row, col, name, rot):
                 map_data[row+r][col+c] = mark
 
 
+class Server:
+    """
+    network server
+    """
+    def __init__(self, client_handler):
+        self.client_handler_ = client_handler
+
+    def listen(self, port=4444):
+        server_socket = socket.socket()
+        server_socket.setblocking(False)
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_socket.bind(('0.0.0.0', port))
+        server_socket.listen(5)
+
+        in_fds = [server_socket]
+        out_fds = []
+        while True:
+            readable, writable, exceptional = select.select(in_fds, out_fds, in_fds, 0.2)
+            if not readable and not writable and not exceptional:
+                continue
+            for s in readable:
+                if s is server_socket:
+                    conn, addr = server_socket.accept()
+                    log('connection from: ' + str(addr))
+                    conn.setblocking(False)
+                    in_fds.append(conn)
+                else:
+                    data = s.recv(2048)
+                    if not data:
+                        log('connection closed: ' + str(s.getpeername()))
+                        if s in in_fds:
+                            in_fds.remove(s)
+                        s.close()
+                    else:
+                        log('received: [' + data.decode('utf8') + ']')
+                        # TODO
+            for s in exceptional:
+                log('except from: ' + s.getpeername())
+                if s in in_fds:
+                    in_fds.remove(s)
+                s.close()
+
+
 def main(screen):
     game = CursesGame(screen)
     game.start()
@@ -364,6 +437,8 @@ def main(screen):
 
 if __name__ == '__main__':
     log('just a test')
-    curses.wrapper(main)
+    # curses.wrapper(main)
+    server = Server(None)
+    server.listen()
 
 # END
