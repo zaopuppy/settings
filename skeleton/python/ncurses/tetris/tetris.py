@@ -290,8 +290,8 @@ class CursesGame(Thread):
             self.win1_.border()
             self.score_panel_.clear()
             self.score_panel_.border()
-            # self.win2_.clear()
-            # self.win2_.border()
+            self.win2_.clear()
+            self.win2_.border()
             self.log_win_.clear()
             self.log_win_.border()
 
@@ -313,7 +313,7 @@ class CursesGame(Thread):
             self.main_screen_.refresh()
             self.win1_.refresh()
             self.score_panel_.refresh()
-            # self.win2_.refresh()
+            self.win2_.refresh()
             self.log_win_.refresh()
 
 
@@ -385,12 +385,41 @@ def put_block(map_data, row, col, name, rot):
                 map_data[row+r][col+c] = mark
 
 
+# def default_client_handler(s, data):
+#     log('received: [' + data.decode('utf8') + ']')
+
+
+client_count_ = 0
+class MultiPlayer:
+
+    def __init__(self):
+        pass
+
+    def on_connected(self, s):
+        global client_count_
+        log('on_connected: ' + str(s.getpeername()))
+        log('client count: %d' % client_count_)
+        if client_count_ > 0:
+            log('max client count reached, force close')
+            s.close()
+        else:
+            client_count_ += 1
+
+    def on_data(self, s, data):
+        log('received: [' + str(data) + ']')
+
+    def on_disconnected(self, s):
+        global client_count_
+        log('on_disconnected: ' + str(s.getpeername()))
+        client_count_ -= 1
+
+
 class Server:
     """
     network server
     """
-    def __init__(self, client_handler):
-        self.client_handler_ = client_handler
+    def __init__(self, callback_type):
+        self.callback_type_ = callback_type
 
     def listen(self, port=4444):
         server_socket = socket.socket()
@@ -399,30 +428,42 @@ class Server:
         server_socket.bind(('0.0.0.0', port))
         server_socket.listen(5)
 
+        client_map = {}
+
         in_fds = [server_socket]
         out_fds = []
         while True:
-            readable, writable, exceptional = select.select(in_fds, out_fds, in_fds, 0.2)
+            readable, writable, exceptional =\
+                select.select(in_fds, out_fds, in_fds, 0.2)
             if not readable and not writable and not exceptional:
                 continue
+
             for s in readable:
                 if s is server_socket:
                     conn, addr = server_socket.accept()
                     log('connection from: ' + str(addr))
                     conn.setblocking(False)
                     in_fds.append(conn)
+                    callback = self.callback_type_()
+                    callback.on_connected(conn)
+                    client_map[conn] = callback
                 else:
+                    callback = client_map[s]
                     data = s.recv(2048)
                     if not data:
+                        callback.on_disconnected(s)
                         log('connection closed: ' + str(s.getpeername()))
                         if s in in_fds:
                             in_fds.remove(s)
                         s.close()
+                        client_map.pop(s)
                     else:
-                        log('received: [' + data.decode('utf8') + ']')
-                        # TODO
+                        callback.on_data(s, data)
+
             for s in exceptional:
                 log('except from: ' + s.getpeername())
+                callback = client_map.pop(s)
+                callback.on_disconnected(s)
                 if s in in_fds:
                     in_fds.remove(s)
                 s.close()
@@ -438,7 +479,7 @@ def main(screen):
 if __name__ == '__main__':
     log('just a test')
     # curses.wrapper(main)
-    server = Server(None)
+    server = Server(MultiPlayer)
     server.listen()
 
 # END
