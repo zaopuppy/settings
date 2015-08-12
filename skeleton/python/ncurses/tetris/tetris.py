@@ -392,8 +392,9 @@ def put_block(map_data, row, col, name, rot):
 client_count_ = 0
 class MultiPlayer:
 
-    def __init__(self):
-        pass
+    def __init__(self, game):
+        self.game = game
+        log(str(game))
 
     def on_connected(self, s):
         global client_count_
@@ -418,8 +419,9 @@ class Server:
     """
     network server
     """
-    def __init__(self, callback_type):
+    def __init__(self, callback_type, **kwargs):
         self.callback_type_ = callback_type
+        self.callback_kwargs_ = kwargs
 
     def listen(self, port=4444):
         server_socket = socket.socket()
@@ -443,10 +445,11 @@ class Server:
                     conn, addr = server_socket.accept()
                     log('connection from: ' + str(addr))
                     conn.setblocking(False)
-                    in_fds.append(conn)
-                    callback = self.callback_type_()
+                    callback = self.callback_type_(self.callback_kwargs_)
                     callback.on_connected(conn)
-                    client_map[conn] = callback
+                    if conn.fileno() >= 0:
+                        client_map[conn] = callback
+                        in_fds.append(conn)
                 else:
                     callback = client_map[s]
                     data = s.recv(2048)
@@ -459,6 +462,10 @@ class Server:
                         client_map.pop(s)
                     else:
                         callback.on_data(s, data)
+                        if s.fileno() < 0:
+                            if s in in_fds:
+                                in_fds.remove(s)
+                            client_map.pop(s)
 
             for s in exceptional:
                 log('except from: ' + s.getpeername())
@@ -479,7 +486,7 @@ def main(screen):
 if __name__ == '__main__':
     log('just a test')
     # curses.wrapper(main)
-    server = Server(MultiPlayer)
+    server = Server(MultiPlayer, game='123')
     server.listen()
 
 # END
