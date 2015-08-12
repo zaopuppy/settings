@@ -18,7 +18,7 @@ except ConnectionRefusedError:
 
 
 def log(msg):
-    print(msg, file=sys.stderr)
+    # print(msg, file=sys.stderr)
     if log_server_socket is not None:
         log_server_socket.send(msg.encode('utf8') + b'\n')
 
@@ -82,6 +82,74 @@ def draw_block(scr, row, col, name, rot):
                 scr.addstr(row+r, col+c*2, '  ', curses.A_REVERSE)
 
 
+def in_map(row, col):
+    if row < 0 or row >= PLAYGROUND_HEIGHT:
+        return False
+    if col < 0 or col >= PLAYGROUND_WIDTH:
+        return False
+    return True
+
+
+def can_put(map_data, row, col, name, rot):
+    data = get_block_data(name, rot)
+    for r, line in enumerate(data):
+        for c, mark in enumerate(line):
+            if mark > 0:
+                if not in_map(row+r, col+c) or map_data[row+r][col+c] > 0:
+                    return False
+    return True
+
+
+def fall_map(map_data):
+    first_empty_row = -1
+    for r in range(PLAYGROUND_HEIGHT-1, -1, -1):
+        if not is_empty_row(map_data[r]):
+            if first_empty_row >= 0:
+                # do move
+                map_data[first_empty_row], map_data[r] = map_data[r], map_data[first_empty_row]
+                first_empty_row -= 1
+        else:
+            if first_empty_row < 0:
+                first_empty_row = r
+
+
+def check_full_row(map_data):
+    full_line_num = 0
+    for r, line in enumerate(map_data):
+        if is_full_row(line):
+            empty_row(line)
+            full_line_num += 1
+    fall_map(map_data)
+    return full_line_num
+
+
+def is_full_row(row):
+    for e in row:
+        if e == 0:
+            return False
+    return True
+
+
+def is_empty_row(row):
+    for e in row:
+        if e != 0:
+            return False
+    return True
+
+
+def empty_row(row):
+    for i in range(len(row)):
+        row[i] = 0
+
+
+def put_block(map_data, row, col, name, rot):
+    data = get_block_data(name, rot)
+    for r, line in enumerate(data):
+        for c, mark in enumerate(line):
+            if mark > 0:
+                map_data[row+r][col+c] = mark
+
+
 class Playing:
     """
     playing
@@ -97,7 +165,7 @@ class Playing:
             if ev_type == 'key':
                 self.process_key(game, ev_value)
             else:
-                raise Exception('unknown event: {}'.format(ev_type))
+                game.handle_event((ev_type, ev_value))
 
         self.step_time_ += delta
         if self.step_time_ >= 0.5:
@@ -105,8 +173,8 @@ class Playing:
             self.process_step_time_up(game)
 
     def process_step_time_up(self, game):
-        pass
-        # self.process_key(game, curses.KEY_DOWN)
+        # pass
+        self.process_key(game, curses.KEY_DOWN)
 
     def process_key(self, game, key):
         if key == curses.KEY_UP or \
@@ -115,22 +183,22 @@ class Playing:
                 key == curses.KEY_RIGHT:
             new_pos_row, new_pos_col, new_rot = 0, 0, 0
             if key == curses.KEY_UP:
-                game.user_log('UP')
+                # game.user_log('UP')
                 new_pos_row = game.cur_pos_row_
                 new_pos_col = game.cur_pos_col_
                 new_rot = (game.cur_rot_+1) % 4
             elif key == curses.KEY_DOWN:
-                game.user_log('DOWN')
+                # game.user_log('DOWN')
                 new_pos_row = game.cur_pos_row_ + 1
                 new_pos_col = game.cur_pos_col_
                 new_rot = game.cur_rot_
             elif key == curses.KEY_LEFT:
-                game.user_log('LEFT')
+                # game.user_log('LEFT')
                 new_pos_row = game.cur_pos_row_
                 new_pos_col = game.cur_pos_col_ - 1
                 new_rot = game.cur_rot_
             elif key == curses.KEY_RIGHT:
-                game.user_log('RIGHT')
+                # game.user_log('RIGHT')
                 new_pos_row = game.cur_pos_row_
                 new_pos_col = game.cur_pos_col_ + 1
                 new_rot = game.cur_rot_
@@ -158,15 +226,11 @@ class Playing:
             game.stop_ = True
 
 
-class CursesGame(Thread):
+class CursesGame:
     """
     A game framework for curses
     """
     def __init__(self, main_screen):
-        super().__init__(
-            group=None, target=None,
-            name='curses-game',
-            args=(), kwargs=None, daemon=True)
 
         self.log_list_ = []
         self.log_list_max_len_ = 6
@@ -248,16 +312,40 @@ class CursesGame(Thread):
         # self.main_screen.keypad(1)
 
     def user_log(self, msg):
-        if len(self.log_list_) < self.log_list_max_len_:
-            self.log_list_.append(msg)
+        with self.event_queue_lock_:
+            self.event_queue_.append(('log', msg))
+
+    def handle_event(self, event):
+        t, v = event
+        if t == 'log':
+            self.need_redraw_ = True
+            if len(self.log_list_) < self.log_list_max_len_:
+                self.log_list_.append(v)
+            else:
+                self.log_list_ = self.log_list_[1:] + [v]
         else:
-            self.log_list_ = self.log_list_[1:] + [msg]
+            raise Exception('unknown event: {}'.format(t))
 
     def spawn_new_block(self):
         self.cur_type_ = random.choice(BLOCK_NAME_LIST)
         self.cur_rot_ = random.choice((0, 1, 2, 3))
         self.cur_pos_row_ = 0
         self.cur_pos_col_ = 6
+
+    def start(self):
+        ui_thread = Thread(
+            group=None, target=self.run,
+            name='ui',
+            args=(), kwargs=None, daemon=True)
+        ui_thread.start()
+
+        server = Server(MultiPlayer, game=self)
+        network_thread = Thread(
+            group=None, target=server.listen,
+            name='network',
+            args=(), kwargs=None, daemon=True)
+        network_thread.start()
+        log('started')
 
     def run(self):
         delta = 0.0
@@ -307,7 +395,10 @@ class CursesGame(Thread):
                 self.cur_pos_row_+offset, self.cur_pos_col_*2+offset,
                 self.cur_type_, self.cur_rot_)
 
+            log('------------')
+            log(str(len(self.log_list_)))
             for i in range(len(self.log_list_)):
+                log(self.log_list_[i])
                 self.log_win_.addstr(1+i, 1+0, self.log_list_[i])
         finally:
             self.main_screen_.refresh()
@@ -317,88 +408,18 @@ class CursesGame(Thread):
             self.log_win_.refresh()
 
 
-def in_map(row, col):
-    if row < 0 or row >= PLAYGROUND_HEIGHT:
-        return False
-    if col < 0 or col >= PLAYGROUND_WIDTH:
-        return False
-    return True
-
-
-def can_put(map_data, row, col, name, rot):
-    data = get_block_data(name, rot)
-    for r, line in enumerate(data):
-        for c, mark in enumerate(line):
-            if mark > 0:
-                if not in_map(row+r, col+c) or map_data[row+r][col+c] > 0:
-                    return False
-    return True
-
-
-def fall_map(map_data):
-    first_empty_row = -1
-    for r in range(PLAYGROUND_HEIGHT-1, -1, -1):
-        if not is_empty_row(map_data[r]):
-            if first_empty_row >= 0:
-                # do move
-                map_data[first_empty_row], map_data[r] = map_data[r], map_data[first_empty_row]
-                first_empty_row -= 1
-        else:
-            if first_empty_row < 0:
-                first_empty_row = r
-
-
-def check_full_row(map_data):
-    full_line_num = 0
-    for r, line in enumerate(map_data):
-        if is_full_row(line):
-            empty_row(line)
-            full_line_num += 1
-    fall_map(map_data)
-    return full_line_num
-
-
-def is_full_row(row):
-    for e in row:
-        if e == 0:
-            return False
-    return True
-
-
-def is_empty_row(row):
-    for e in row:
-        if e != 0:
-            return False
-    return True
-
-
-def empty_row(row):
-    for i in range(len(row)):
-        row[i] = 0
-
-
-def put_block(map_data, row, col, name, rot):
-    data = get_block_data(name, rot)
-    for r, line in enumerate(data):
-        for c, mark in enumerate(line):
-            if mark > 0:
-                map_data[row+r][col+c] = mark
-
-
-# def default_client_handler(s, data):
-#     log('received: [' + data.decode('utf8') + ']')
-
-
 client_count_ = 0
+
+
 class MultiPlayer:
 
-    def __init__(self, game):
+    def __init__(self, game=None):
         self.game = game
-        log(str(game))
+        log(str(self.game))
 
     def on_connected(self, s):
         global client_count_
-        log('on_connected: ' + str(s.getpeername()))
+        self.game.user_log('on_connected: ' + str(s.getpeername()))
         log('client count: %d' % client_count_)
         if client_count_ > 0:
             log('max client count reached, force close')
@@ -411,6 +432,7 @@ class MultiPlayer:
 
     def on_disconnected(self, s):
         global client_count_
+        self.game.user_log('on_disconnected: ' + str(s.getpeername()))
         log('on_disconnected: ' + str(s.getpeername()))
         client_count_ -= 1
 
@@ -445,7 +467,7 @@ class Server:
                     conn, addr = server_socket.accept()
                     log('connection from: ' + str(addr))
                     conn.setblocking(False)
-                    callback = self.callback_type_(self.callback_kwargs_)
+                    callback = self.callback_type_(**self.callback_kwargs_)
                     callback.on_connected(conn)
                     if conn.fileno() >= 0:
                         client_map[conn] = callback
@@ -485,8 +507,7 @@ def main(screen):
 
 if __name__ == '__main__':
     log('just a test')
-    # curses.wrapper(main)
-    server = Server(MultiPlayer, game='123')
-    server.listen()
+    curses.wrapper(main)
+    # main()
 
 # END
