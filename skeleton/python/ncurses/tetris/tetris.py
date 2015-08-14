@@ -150,115 +150,31 @@ def put_block(map_data, row, col, name, rot):
                 map_data[row+r][col+c] = mark
 
 
+class WaitForP2:
+    def __init__(self, game):
+        self.game = game
+
+    def update(self, delta):
+        pass
+
+    def draw(self):
+        pass
+
+
 class Playing:
     """
     playing
     """
-    def __init__(self):
+    def __init__(self, game):
         self.step_time_ = 0
-
-    def update(self, game, delta):
-        with game.event_queue_lock_:
-            event_queue = game.event_queue_.copy()
-            game.event_queue_.clear()
-        for ev_type, ev_value in event_queue:
-            if ev_type == 'key':
-                self.process_key(game, ev_value)
-            else:
-                game.handle_event((ev_type, ev_value))
-
-        self.step_time_ += delta
-        if self.step_time_ >= 0.5:
-            self.step_time_ = divmod(self.step_time_, 0.5)[1]
-            self.process_step_time_up(game)
-
-    def process_step_time_up(self, game):
-        # pass
-        self.process_key(game, curses.KEY_DOWN)
-
-    def process_key(self, game, key):
-        if key == curses.KEY_UP or \
-                key == curses.KEY_DOWN or \
-                key == curses.KEY_LEFT or \
-                key == curses.KEY_RIGHT:
-            new_pos_row, new_pos_col, new_rot = 0, 0, 0
-            if key == curses.KEY_UP:
-                # game.user_log('UP')
-                new_pos_row = game.cur_pos_row_
-                new_pos_col = game.cur_pos_col_
-                new_rot = (game.cur_rot_+1) % 4
-            elif key == curses.KEY_DOWN:
-                # game.user_log('DOWN')
-                new_pos_row = game.cur_pos_row_ + 1
-                new_pos_col = game.cur_pos_col_
-                new_rot = game.cur_rot_
-            elif key == curses.KEY_LEFT:
-                # game.user_log('LEFT')
-                new_pos_row = game.cur_pos_row_
-                new_pos_col = game.cur_pos_col_ - 1
-                new_rot = game.cur_rot_
-            elif key == curses.KEY_RIGHT:
-                # game.user_log('RIGHT')
-                new_pos_row = game.cur_pos_row_
-                new_pos_col = game.cur_pos_col_ + 1
-                new_rot = game.cur_rot_
-            if can_put(
-                    game.map_data_,
-                    new_pos_row, new_pos_col, game.cur_type_, new_rot):
-                log('row={}, col={}, type={}, rot={}'.format(
-                    new_pos_row, new_pos_col, game.cur_type_, new_rot
-                ))
-                game.cur_pos_row_ = new_pos_row
-                game.cur_pos_col_ = new_pos_col
-                game.cur_rot_ = new_rot
-                game.need_redraw_ = True
-            else:
-                if key == curses.KEY_DOWN:
-                    log('bottom touched, fix block and spawn a new one')
-                    put_block(
-                        game.map_data_,
-                        game.cur_pos_row_, game.cur_pos_col_,
-                        game.cur_type_, game.cur_rot_)
-                    check_full_row(game.map_data_)
-                    game.spawn_new_block()
-                    game.need_redraw_ = True
-        elif key == ord('q'):
-            game.stop_ = True
-
-
-class CursesGame:
-    """
-    A game framework for curses
-    """
-    def __init__(self, main_screen):
-
-        self.log_list_ = []
-        self.log_list_max_len_ = 6
+        self.game_ = game
+        self.need_redraw_ = True
 
         score_panel_width = 10+2
         score_panel_height = PLAYGROUND_HEIGHT + 2
         scene_width = PLAYGROUND_WIDTH*2 + 2
         scene_height = PLAYGROUND_HEIGHT + 2
-        log_panel_height = self.log_list_max_len_+2
-
-        self.main_screen_ = main_screen
-        self.height_, self.width_ = main_screen.getmaxyx()
-
-        min_height = max(scene_height, score_panel_height) + log_panel_height + 5
-        min_width = score_panel_width + scene_width*2 + 5
-        if self.height_ < min_height or self.width_ < min_width:
-            raise Exception('screen size must be {}*{} or larger'.format(min_width, min_height))
-
-        self.map_data_ = []
-        for r in range(PLAYGROUND_HEIGHT):
-            self.map_data_.append([0 for _ in range(PLAYGROUND_WIDTH)])
-
-        self.stop_ = False
-        self.fps_ = 0.0
-        self.need_redraw_ = True
-
-        self.event_queue_lock_ = RLock()
-        self.event_queue_ = []
+        log_panel_height = game.log_list_max_len_+2
 
         # for current active block
         self.cur_rot_ = 0
@@ -304,7 +220,156 @@ class CursesGame:
             log_win_pos_row, log_win_pos_col
         )
 
-        self.state_ = Playing()
+    def update(self, delta):
+        with self.game_.event_queue_lock_:
+            event_queue = self.game_.event_queue_.copy()
+            self.game_.event_queue_.clear()
+        for ev_type, ev_value in event_queue:
+            if ev_type == 'key':
+                self.process_key(ev_value)
+            elif ev_type == 'log':
+                self.need_redraw_ = True
+                if len(self.game_.log_list_) < self.game_.log_list_max_len_:
+                    self.game_.log_list_.append(ev_value)
+                else:
+                    self.game_.log_list_ = self.game_.log_list_[1:] + [ev_value]
+            else:
+                self.game_.handle_event((ev_type, ev_value))
+
+        self.step_time_ += delta
+        if self.step_time_ >= 0.5:
+            self.step_time_ = divmod(self.step_time_, 0.5)[1]
+            self.process_step_time_up()
+
+    def spawn_new_block(self):
+        self.cur_type_ = random.choice(BLOCK_NAME_LIST)
+        self.cur_rot_ = random.choice((0, 1, 2, 3))
+        self.cur_pos_row_ = 0
+        self.cur_pos_col_ = 6
+
+    def process_step_time_up(self):
+        # self.process_key(curses.KEY_DOWN)
+        pass
+
+    def process_key(self, key):
+        if key == curses.KEY_UP or \
+                key == curses.KEY_DOWN or \
+                key == curses.KEY_LEFT or \
+                key == curses.KEY_RIGHT:
+            new_pos_row, new_pos_col, new_rot = 0, 0, 0
+            if key == curses.KEY_UP:
+                # game.user_log('UP')
+                new_pos_row = self.cur_pos_row_
+                new_pos_col = self.cur_pos_col_
+                new_rot = (self.cur_rot_+1) % 4
+            elif key == curses.KEY_DOWN:
+                # game.user_log('DOWN')
+                new_pos_row = self.cur_pos_row_ + 1
+                new_pos_col = self.cur_pos_col_
+                new_rot = self.cur_rot_
+            elif key == curses.KEY_LEFT:
+                # game.user_log('LEFT')
+                new_pos_row = self.cur_pos_row_
+                new_pos_col = self.cur_pos_col_ - 1
+                new_rot = self.cur_rot_
+            elif key == curses.KEY_RIGHT:
+                # game.user_log('RIGHT')
+                new_pos_row = self.cur_pos_row_
+                new_pos_col = self.cur_pos_col_ + 1
+                new_rot = self.cur_rot_
+            if can_put(
+                    self.game_.map_data_,
+                    new_pos_row, new_pos_col, self.cur_type_, new_rot):
+                log('row={}, col={}, type={}, rot={}'.format(
+                    new_pos_row, new_pos_col, self.cur_type_, new_rot
+                ))
+                self.cur_pos_row_ = new_pos_row
+                self.cur_pos_col_ = new_pos_col
+                self.cur_rot_ = new_rot
+                self.need_redraw_ = True
+            else:
+                if key == curses.KEY_DOWN:
+                    log('bottom touched, fix block and spawn a new one')
+                    put_block(
+                        self.game_.map_data_,
+                        self.cur_pos_row_, self.cur_pos_col_,
+                        self.cur_type_, self.cur_rot_)
+                    check_full_row(self.game_.map_data_)
+                    self.spawn_new_block()
+                    self.need_redraw_ = True
+        elif key == ord('q'):
+            self.game_.stop_ = True
+
+    def draw(self):
+        if not self.need_redraw_:
+            return
+        self.need_redraw_ = False
+
+        try:
+            self.win1_.clear()
+            self.win1_.border()
+            self.score_panel_.clear()
+            self.score_panel_.border()
+            self.win2_.clear()
+            self.win2_.border()
+            self.log_win_.clear()
+            self.log_win_.border()
+
+            offset = 1
+
+            for r, line in enumerate(self.game_.map_data_):
+                for c, mark in enumerate(line):
+                    if mark > 0:
+                        self.win1_.addstr(r+offset, c*2+offset, '  ', curses.A_REVERSE)
+
+            draw_block(
+                self.win1_,
+                self.cur_pos_row_+offset, self.cur_pos_col_*2+offset,
+                self.cur_type_, self.cur_rot_)
+
+            log('------------')
+            log(str(len(self.game_.log_list_)))
+            for i in range(len(self.game_.log_list_)):
+                log(self.game_.log_list_[i])
+                self.log_win_.addstr(1+i, 1+0, self.game_.log_list_[i])
+        finally:
+            # TODO
+            self.game_.main_screen_.refresh()
+            self.win1_.refresh()
+            self.score_panel_.refresh()
+            self.win2_.refresh()
+            self.log_win_.refresh()
+
+
+class CursesGame:
+    """
+    A game framework for curses
+    """
+    def __init__(self, main_screen):
+
+        self.log_list_ = []
+        self.log_list_max_len_ = 6
+
+        self.main_screen_ = main_screen
+        self.height_, self.width_ = main_screen.getmaxyx()
+
+        # TODO
+        # min_height = max(scene_height, score_panel_height) + log_panel_height + 5
+        # min_width = score_panel_width + scene_width*2 + 5
+        # if self.height_ < min_height or self.width_ < min_width:
+        #     raise Exception('screen size must be {}*{} or larger'.format(min_width, min_height))
+
+        self.map_data_ = []
+        for r in range(PLAYGROUND_HEIGHT):
+            self.map_data_.append([0 for _ in range(PLAYGROUND_WIDTH)])
+
+        self.stop_ = False
+        self.fps_ = 0.0
+
+        self.event_queue_lock_ = RLock()
+        self.event_queue_ = []
+
+        self.state_ = Playing(self)
 
         # hide cursor
         curses.curs_set(0)
@@ -316,21 +381,7 @@ class CursesGame:
             self.event_queue_.append(('log', msg))
 
     def handle_event(self, event):
-        t, v = event
-        if t == 'log':
-            self.need_redraw_ = True
-            if len(self.log_list_) < self.log_list_max_len_:
-                self.log_list_.append(v)
-            else:
-                self.log_list_ = self.log_list_[1:] + [v]
-        else:
-            raise Exception('unknown event: {}'.format(t))
-
-    def spawn_new_block(self):
-        self.cur_type_ = random.choice(BLOCK_NAME_LIST)
-        self.cur_rot_ = random.choice((0, 1, 2, 3))
-        self.cur_pos_row_ = 0
-        self.cur_pos_col_ = 6
+        pass
 
     def start(self):
         ui_thread = Thread(
@@ -366,46 +417,10 @@ class CursesGame:
 
     def update(self, delta):
         # print('delta={}, fps={}'.format(delta, self.fps))
-        self.state_.update(self, delta)
+        self.state_.update(delta)
 
     def draw(self):
-        if not self.need_redraw_:
-            return
-        self.need_redraw_ = False
-
-        try:
-            self.win1_.clear()
-            self.win1_.border()
-            self.score_panel_.clear()
-            self.score_panel_.border()
-            self.win2_.clear()
-            self.win2_.border()
-            self.log_win_.clear()
-            self.log_win_.border()
-
-            offset = 1
-
-            for r, line in enumerate(self.map_data_):
-                for c, mark in enumerate(line):
-                    if mark > 0:
-                        self.win1_.addstr(r+offset, c*2+offset, '  ', curses.A_REVERSE)
-
-            draw_block(
-                self.win1_,
-                self.cur_pos_row_+offset, self.cur_pos_col_*2+offset,
-                self.cur_type_, self.cur_rot_)
-
-            log('------------')
-            log(str(len(self.log_list_)))
-            for i in range(len(self.log_list_)):
-                log(self.log_list_[i])
-                self.log_win_.addstr(1+i, 1+0, self.log_list_[i])
-        finally:
-            self.main_screen_.refresh()
-            self.win1_.refresh()
-            self.score_panel_.refresh()
-            self.win2_.refresh()
-            self.log_win_.refresh()
+        self.state_.draw()
 
 
 client_count_ = 0
