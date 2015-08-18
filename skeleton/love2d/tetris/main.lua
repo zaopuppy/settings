@@ -6,7 +6,10 @@ WINDOW_WIDTH = COLUMNS * TILE_WIDTH
 WINDOW_HEIGHT = ROWS * TILE_HEIGHT
 
 TYPE_EMPTY = 0
-TYPE_MOUSE = 1
+TYPE_MOUSE = -1
+
+COLOR_EMPTY = { 0, 0, 0 }
+COLOR_MOUSE = { 255, 128, 0, 100 }
 
 g_palette = {
     [0] = { 0, 0, 0 },
@@ -65,7 +68,7 @@ function love.draw()
 
     local c, r = love.mouse.getPosition()
     c, r = math.floor(c/TILE_WIDTH), math.floor(r/TILE_HEIGHT)
-    love.graphics.setColor(unpack(g_palette[TYPE_MOUSE]))
+    love.graphics.setColor(unpack(COLOR_MOUSE))
     love.graphics.rectangle(
         "fill",
         c*TILE_WIDTH, r*TILE_HEIGHT,
