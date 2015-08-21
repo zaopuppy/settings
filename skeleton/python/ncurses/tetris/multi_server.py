@@ -106,7 +106,7 @@ class NetworkInputSource:
         pass
 
 
-class Game:
+class GameClient:
     def __init__(self):
         self.server_ = Server()
         self.server_.start()
