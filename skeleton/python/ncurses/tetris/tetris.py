@@ -150,7 +150,18 @@ def put_block(map_data, row, col, name, rot):
                 map_data[row+r][col+c] = mark
 
 
+class WaitForP1:
+    """
+    connect to P1 as a client
+    """
+    def __init__(self):
+        pass
+
+
 class WaitForP2:
+    """
+    wait P2 as a server
+    """
     def __init__(self, game):
         self.game = game
 
@@ -333,8 +344,6 @@ class Playing:
                 log(self.game_.log_list_[i])
                 self.log_win_.addstr(1+i, 1+0, self.game_.log_list_[i])
         finally:
-            # TODO
-            self.game_.main_screen_.refresh()
             self.win1_.refresh()
             self.score_panel_.refresh()
             self.win2_.refresh()
@@ -420,6 +429,8 @@ class CursesGame:
         self.state_.update(delta)
 
     def draw(self):
+        # TODO
+        self.main_screen_.refresh()
         self.state_.draw()
 
 
