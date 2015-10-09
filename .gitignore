@@ -1,4 +1,6 @@
 
+.DS_Store
+*.pyc
 *.d
 *.out
 *.class
@@ -7,4 +9,7 @@ CMakeFiles
 cmake_install.cmake
 
 .idea
+
+# binary files
+*.zip
 
