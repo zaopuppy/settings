@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Todo-List</title>
+  </head>
+
+  <body>
+
+    <section id="app-view">
+      <header>
+        <h1>Todo-List</h1>
+      </header>
+      <section>
+        <ul id="todo-list-view"></ul>
+      </section>
+    </section>
+
+    <script type="text/template" id="item-template">
+       <div class="view">
+            <input class="toggle" type="checkbox" <%= completed ? 'checked' : '' %>>
+            <label><%- title %></label>
+            <button class="destroy"></button>
+        </div>
+        <input class="edit" value="<%- title %>">
+    </script>
+
+    <script src="js/jquery/jquery-2.1.4.js"></script>
+    <script src="js/underscore/underscore.js"></script>
+    <script src="js/backbone/backbone.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+
+</html>

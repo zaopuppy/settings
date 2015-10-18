@@ -2,6 +2,15 @@
 using System.Collections;
 
 public class Util {
+
+	public static int GetPlatfom() {
+
+#if UNITY_STANDALONE || UNITY_WEBPLAYER
+#else
+#endif
+		return 0;
+	}
+
 	public static int GetScreenWidth() {
 		return Screen.width;
 	}
