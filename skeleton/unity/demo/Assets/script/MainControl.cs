@@ -251,6 +251,11 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 		               map_mouse.y, map_mouse.x));
 		begin_y += row_height;
 
+		// mouse2map
+		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
+		           string.Format ("Time.time={0,5:F}", Time.time));
+		begin_y += row_height;
+
 		// --------------------------
 		// Pause menu
 		if (!ShowPauseMenu()) {
