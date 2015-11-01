@@ -77,7 +77,8 @@ public class InputController : MonoBehaviour {
 	private IEnumerator AnimationCoroutineByEdge() {
 		Quaternion target_rot = cube_.transform.rotation * Quaternion.Euler(0, 0, 90.0f);
 
-		EdgeInfo info = GetEdge(cube_.transform);
+		// EdgeInfo info = GetEdge(cube_.transform, 0);
+		EdgeInfo info = GetNearestEdge(cube_.transform, Input.mousePosition);
 		float period = .5f;
 		// for (float passed = 0; passed <= period; passed = Time.time - begin) {
 		float delta = 90.0f/(period/0.05f);
@@ -101,12 +102,46 @@ public class InputController : MonoBehaviour {
 			this.axis = axis;
 		}
 	}
-	
-	private EdgeInfo GetEdge(Transform trans) {
-		float width = 1.0f;
-		float height = 1.0f;
 
-		Vector3 pos = new Vector3(width/2, -height/2, 0);
+	private readonly Vector3[] EDGE_CENTER_LIST = {
+		new Vector3(-1,  1, 0), new Vector3(0,  1, -1), new Vector3(0,  1, 1), new Vector3(1,  1, 0),
+		new Vector3(-1, -1, 0), new Vector3(0, -1, -1), new Vector3(0, -1, 1), new Vector3(1, -1, 0),
+	};
+
+	private Vector3[] GetAllEdgeCenter(Transform trans) {
+		int size = EDGE_CENTER_LIST.GetLength(0);
+		Vector3[] l = new Vector3[size];
+
+		for (int i = 0; i < EDGE_CENTER_LIST.GetLength(0); ++i) {
+			Vector3 p = EDGE_CENTER_LIST[i];
+			l[i] = trans.TransformPoint(p*0.5f);
+		}
+
+		return l;
+	}
+
+	private EdgeInfo GetNearestEdge(Transform trans, Vector3 point) {
+		Vector3[] edge_center_list = GetAllEdgeCenter(trans);
+
+		int idx = 0;
+		float shortest = float.PositiveInfinity;
+		// foreach (Vector3 p in edge_center_list) {
+		for (int i = 0; i < edge_center_list.GetLength(0); ++i) {
+			float distance = Vector3.Distance(point, edge_center_list[i]);
+			if (distance < shortest) {
+				shortest = distance;
+				idx = i;
+			}
+		}
+
+		return GetEdge(trans, idx);
+	}
+	
+	private EdgeInfo GetEdge(Transform trans, int edge) {
+		float width = 1.0f;
+
+		Vector3 pos = EDGE_CENTER_LIST[edge]*(width/2);
+
 		// TODO: why doesn't this work?
 		// pos = trans.localToWorldMatrix * pos;
 		// take care of scale
@@ -121,6 +156,13 @@ public class InputController : MonoBehaviour {
 		yield return new WaitForSeconds(0.05f);
 	}
 
+	void OnDrawGizmos() {
+		Vector3 mouse_pos = Input.mousePosition;
+		mouse_pos = Camera.main.ScreenToWorldPoint (new Vector3(mouse_pos.x, mouse_pos.y, Camera.main.nearClipPlane));
+		Gizmos.color = Color.yellow;
+		Gizmos.DrawSphere(mouse_pos, 0.1f);
+	}
+
 	void OnGUI ()
 	{
 		float begin_x = 10;
@@ -128,13 +170,22 @@ public class InputController : MonoBehaviour {
 		float row_height = 20;
 		float row_width = 1000;
 		
+		// mouse position
+		Vector3 mouse_pos = Input.mousePosition;
+		mouse_pos = Camera.main.ScreenToWorldPoint (new Vector3(mouse_pos.x, mouse_pos.y, Camera.main.nearClipPlane));
+		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
+		           string.Format ("mouse=({0,5:F}, {1,5:F}, {2,5:F})",
+		               mouse_pos.x, mouse_pos.y, mouse_pos.z));
+		begin_y += row_height;
+
+		// cube position
 		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
 		           string.Format ("cube=({0,5:F}, {1,5:F}, {2,5:F})",
 		               cube_.transform.position.x, cube_.transform.position.y, cube_.transform.position.z));
 		begin_y += row_height;
-		// mouse position
-		// Vector3 mouse_pos = Camera.main.ScreenToWorldPoint (Input.mousePosition);
-		EdgeInfo info = GetEdge(cube_.transform);
+
+		// edge info
+		EdgeInfo info = GetEdge(cube_.transform, 0);
 		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
 		           string.Format ("edge=({0,5:F}, {1,5:F}, {2,5:F})",
 		               info.center.x, info.center.y, info.center.z));
