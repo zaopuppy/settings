@@ -75,10 +75,17 @@ public class InputController : MonoBehaviour {
 	 * rotate around the specific edge
 	 */
 	private IEnumerator AnimationCoroutineByEdge() {
-		Quaternion target_rot = cube_.transform.rotation * Quaternion.Euler(0, 0, 90.0f);
+		// Quaternion target_rot = cube_.transform.rotation * Quaternion.Euler(0, 0, 90.0f);
+//		Quaternion orig_rotation = cube_.transform.rotation;
 
 		// EdgeInfo info = GetEdge(cube_.transform, 0);
-		EdgeInfo info = GetNearestEdge(cube_.transform, Input.mousePosition);
+		EdgeInfo info = GetNearestEdge(
+			cube_.transform,
+			// cube_.transform.TransformPoint(new Vector3(0.5f, 0.0f, 0.5f)));
+			cube_.transform.position + new Vector3(0.5f, 0.0f, 0.5f));
+
+		Debug.Log (cube_.transform.rotation + ", " + cube_.transform.rotation.eulerAngles + ", " + info.axis);
+
 		float period = .5f;
 		// for (float passed = 0; passed <= period; passed = Time.time - begin) {
 		float delta = 90.0f/(period/0.05f);
@@ -89,8 +96,9 @@ public class InputController : MonoBehaviour {
 			yield return new WaitForSeconds(0.05f);
 		}
 
-		// TODO: make sure the cube is rotated correctly
-		cube_.transform.rotation = target_rot;
+		// to make sure we don't get calculation error
+//		cube_.transform.rotation = orig_rotation;
+//		cube_.transform.RotateAround(info.center, info.axis, 90.0f);
 	}
 	
 	private struct EdgeInfo {
@@ -103,9 +111,29 @@ public class InputController : MonoBehaviour {
 		}
 	}
 
+	/**
+	 *           2
+	 *      +----------+
+	 *    1/|       4 /|
+	 *    / | 3      / |
+	 *   +-9--------+10|
+	 *   |  |    6  |  |
+	 * 11|  +-----12|--+
+	 *   |5/        |7/
+	 *   |/     8   |/
+	 *   +----------+
+	 * 
+	 */
 	private readonly Vector3[] EDGE_CENTER_LIST = {
-		new Vector3(-1,  1, 0), new Vector3(0,  1, -1), new Vector3(0,  1, 1), new Vector3(1,  1, 0),
-		new Vector3(-1, -1, 0), new Vector3(0, -1, -1), new Vector3(0, -1, 1), new Vector3(1, -1, 0),
+		new Vector3(-1,  1, 0), new Vector3(0,  1, 1), new Vector3( 0,  1, -1), new Vector3(1,  1,  0),
+		new Vector3(-1, -1, 0), new Vector3(0, -1, 1), new Vector3( 0, -1, -1), new Vector3(1, -1,  0),
+		new Vector3(-1,  0, 1), new Vector3(1,  0, 1), new Vector3(-1,  0, -1), new Vector3(1,  0, -1),
+	};
+
+	private readonly Vector3[] EDGE_AXIS_LIST = {
+		new Vector3(0, 0, 1), new Vector3(1, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1),
+		new Vector3(0, 0, 1), new Vector3(1, 0, 0), new Vector3(1, 0, 0), new Vector3(0, 0, 1),
+		new Vector3(0, 1, 0), new Vector3(0, 1, 0), new Vector3(0, 1, 0), new Vector3(0, 1, 0),
 	};
 
 	private Vector3[] GetAllEdgeCenter(Transform trans) {
@@ -147,7 +175,9 @@ public class InputController : MonoBehaviour {
 		// take care of scale
 		pos = trans.TransformPoint(pos);
 
-		Vector3 axis = new Vector3(0, 0, 1);
+		Debug.Log ("orig-axis: " + EDGE_AXIS_LIST[edge]);
+		Vector3 axis = trans.TransformVector(EDGE_AXIS_LIST[edge]);
+		// Vector3 axis = trans.TransformDirection(EDGE_AXIS_LIST[edge]);
 
 		return new EdgeInfo(pos, axis);
 	}
@@ -156,40 +186,47 @@ public class InputController : MonoBehaviour {
 		yield return new WaitForSeconds(0.05f);
 	}
 
-	void OnDrawGizmos() {
-		Vector3 mouse_pos = Input.mousePosition;
-		mouse_pos = Camera.main.ScreenToWorldPoint (new Vector3(mouse_pos.x, mouse_pos.y, Camera.main.nearClipPlane));
+	void OnDrawGizmos_() {
+//		Vector3 mouse_pos = Input.mousePosition;
+//		mouse_pos = Camera.main.ScreenToWorldPoint (new Vector3(mouse_pos.x, mouse_pos.y, Camera.main.nearClipPlane));
 		Gizmos.color = Color.yellow;
-		Gizmos.DrawSphere(mouse_pos, 0.1f);
+//		Gizmos.DrawSphere(new Vector3(0.0f, 0.0f, 0.0f), 0.1f);
+		Gizmos.DrawSphere(cube_.transform.position + new Vector3(-0.5f, 0.0f, 0.5f), 0.05f);
+
+		Gizmos.color = Color.red;
+		EdgeInfo info = GetNearestEdge(
+			cube_.transform,
+			cube_.transform.position + new Vector3(-0.5f, 0.0f, 0.5f));
+		Gizmos.DrawSphere(info.center, 0.05f);
 	}
 
 	void OnGUI ()
 	{
-		float begin_x = 10;
-		float begin_y = 10;
-		float row_height = 20;
-		float row_width = 1000;
-		
-		// mouse position
-		Vector3 mouse_pos = Input.mousePosition;
-		mouse_pos = Camera.main.ScreenToWorldPoint (new Vector3(mouse_pos.x, mouse_pos.y, Camera.main.nearClipPlane));
-		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
-		           string.Format ("mouse=({0,5:F}, {1,5:F}, {2,5:F})",
-		               mouse_pos.x, mouse_pos.y, mouse_pos.z));
-		begin_y += row_height;
-
-		// cube position
-		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
-		           string.Format ("cube=({0,5:F}, {1,5:F}, {2,5:F})",
-		               cube_.transform.position.x, cube_.transform.position.y, cube_.transform.position.z));
-		begin_y += row_height;
-
-		// edge info
-		EdgeInfo info = GetEdge(cube_.transform, 0);
-		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
-		           string.Format ("edge=({0,5:F}, {1,5:F}, {2,5:F})",
-		               info.center.x, info.center.y, info.center.z));
-		begin_y += row_height;
+//		float begin_x = 10;
+//		float begin_y = 10;
+//		float row_height = 20;
+//		float row_width = 1000;
+//		
+//		// mouse position
+//		Vector3 mouse_pos = Input.mousePosition;
+//		mouse_pos = Camera.main.ScreenToWorldPoint (new Vector3(mouse_pos.x, mouse_pos.y, Camera.main.nearClipPlane));
+//		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
+//		           string.Format ("mouse=({0,5:F}, {1,5:F}, {2,5:F})",
+//		               mouse_pos.x, mouse_pos.y, mouse_pos.z));
+//		begin_y += row_height;
+//
+//		// cube position
+//		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
+//		           string.Format ("cube=({0,5:F}, {1,5:F}, {2,5:F})",
+//		               cube_.transform.position.x, cube_.transform.position.y, cube_.transform.position.z));
+//		begin_y += row_height;
+//
+//		// edge info
+//		EdgeInfo info = GetEdge(cube_.transform, 0);
+//		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
+//		           string.Format ("edge=({0,5:F}, {1,5:F}, {2,5:F})",
+//		               info.center.x, info.center.y, info.center.z));
+//		begin_y += row_height;
 		
 	}
 }
