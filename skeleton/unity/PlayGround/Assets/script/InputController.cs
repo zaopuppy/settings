@@ -82,7 +82,7 @@ public class InputController : MonoBehaviour {
 		EdgeInfo info = GetNearestEdge(
 			cube_.transform,
 			// cube_.transform.TransformPoint(new Vector3(0.5f, 0.0f, 0.5f)));
-			cube_.transform.position + new Vector3(0.5f, 0.0f, 0.5f));
+			cube_.transform.position + new Vector3(-1.0f, 0.0f, 0.5f));
 
 		Debug.Log (cube_.transform.rotation + ", " + cube_.transform.rotation.eulerAngles + ", " + info.axis);
 
@@ -162,10 +162,10 @@ public class InputController : MonoBehaviour {
 			}
 		}
 
-		return GetEdge(trans, idx);
+		return GetEdge(trans, idx, point);
 	}
 	
-	private EdgeInfo GetEdge(Transform trans, int edge) {
+	private EdgeInfo GetEdge(Transform trans, int edge, Vector3 target) {
 		float width = 1.0f;
 
 		Vector3 pos = EDGE_CENTER_LIST[edge]*(width/2);
@@ -179,6 +179,33 @@ public class InputController : MonoBehaviour {
 		Vector3 axis = trans.TransformVector(EDGE_AXIS_LIST[edge]);
 		// Vector3 axis = trans.TransformDirection(EDGE_AXIS_LIST[edge]);
 
+		/**
+		 *            
+		 *      +----------+
+		 *     /|         /|
+		 *    / |        / |
+		 *   +----------+  |
+		 *   |  | O +   |  |
+		 *   |  +-------|--+ B
+		 *   | /        | /A      + D
+		 *   |/         |/
+		 *   +----------+ C
+		 * 
+		 * 
+		 * 
+		 */
+		// V(OA)
+		Vector3 v1 = pos - trans.position;
+		// V(OD)
+		Vector3 v2 = target - trans.position;
+		// get the right direction first
+		Vector3 dir = Vector3.Cross(v2, v1);
+		// then adjust target axis
+		if (Vector3.Dot(dir, axis) < 0) {
+			// Debug.Log ("reverse is needed");
+			axis = -axis;
+		}
+
 		return new EdgeInfo(pos, axis);
 	}
 
@@ -186,17 +213,17 @@ public class InputController : MonoBehaviour {
 		yield return new WaitForSeconds(0.05f);
 	}
 
-	void OnDrawGizmos_() {
+	void OnDrawGizmos() {
 //		Vector3 mouse_pos = Input.mousePosition;
 //		mouse_pos = Camera.main.ScreenToWorldPoint (new Vector3(mouse_pos.x, mouse_pos.y, Camera.main.nearClipPlane));
 		Gizmos.color = Color.yellow;
 //		Gizmos.DrawSphere(new Vector3(0.0f, 0.0f, 0.0f), 0.1f);
-		Gizmos.DrawSphere(cube_.transform.position + new Vector3(-0.5f, 0.0f, 0.5f), 0.05f);
+		Gizmos.DrawSphere(cube_.transform.position + new Vector3(-1.0f, 0.0f, 0.5f), 0.05f);
 
 		Gizmos.color = Color.red;
 		EdgeInfo info = GetNearestEdge(
 			cube_.transform,
-			cube_.transform.position + new Vector3(-0.5f, 0.0f, 0.5f));
+			cube_.transform.position + new Vector3(-1.0f, 0.0f, 0.5f));
 		Gizmos.DrawSphere(info.center, 0.05f);
 	}
 
