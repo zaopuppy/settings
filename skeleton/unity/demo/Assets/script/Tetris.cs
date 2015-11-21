@@ -128,9 +128,9 @@ public class Tetris
 
 	// -----------------------------------
 
-	public static Tetris Create (int map_width, int map_height, Vector3 offset, Callback callback)
+	public static Tetris Create (int map_width, int map_height, Callback callback)
 	{
-		return new Tetris (map_width, map_height, offset, callback);
+		return new Tetris (map_width, map_height, callback);
 	}
 
 	private Callback callback_;
@@ -138,7 +138,6 @@ public class Tetris
 	private int[,] map_;
 	private readonly int map_height_;
 	private readonly int map_width_;
-	private Vector3 offset_;
 	Player player_ = new Player ();
 
 	private int score_ = 0;
@@ -147,11 +146,10 @@ public class Tetris
 		get { return score_; }
 	}
 
-	protected Tetris (int map_width, int map_height, Vector3 offset, Callback callback)
+	protected Tetris (int map_width, int map_height, Callback callback)
 	{
 		map_height_ = map_height;
 		map_width_ = map_width;
-		offset_ = offset;
 		callback_ = callback;
 
 		map_ = new int[map_height, map_width];
@@ -403,38 +401,5 @@ public class Tetris
 		}
 		
 		return true;
-	}
-
-	public Vector3 MapToTetris (Vector2 point)
-	{
-		return new Vector3 (
-			point.x * Tetris.BLOCK_WIDTH, point.y * Tetris.BLOCK_HEIGHT, 0);
-	}
-	
-	public Vector2 TetrisToMap (Vector3 point)
-	{
-		float col = Mathf.Round (point.x / Tetris.BLOCK_WIDTH);
-		float row = Mathf.Round (point.y / Tetris.BLOCK_HEIGHT);
-		return new Vector2 (col, row);
-	}
-	
-	public Vector3 WorldToTetris (Vector3 point)
-	{
-		return point + offset_;
-	}
-	
-	public Vector3 TetrisToWorld (Vector3 point)
-	{
-		return point - offset_;
-	}
-	
-	public Vector2 WorldToMap (Vector3 pos)
-	{
-		return TetrisToMap (WorldToTetris (pos));
-	}
-	
-	public Vector3 MapToWorld (Vector2 pos)
-	{
-		return TetrisToWorld (MapToTetris (pos));
 	}
 }

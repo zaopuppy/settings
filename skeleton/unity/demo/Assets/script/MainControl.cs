@@ -14,11 +14,12 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 	// cube prefab
 	public GameObject cube_;
 
-	// top
-	public GameObject top_;
+	// plane
+	public GameObject plane_;
 
-	// buttom
-	public GameObject bottom_;
+	// offsets
+	private Vector3 plane_offset_;
+	private Vector3 cube_offset_;
 
 	// unit: block
 	private int MAP_WIDTH;
@@ -26,7 +27,6 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 	private int MAP_HEIGHT;
 	private int[,] map_;
 	private GameObject[,] block_map_;
-	private Vector3 offset_;
 	private PlayerData cur_player_;
 	//
 	private Timer step_timer_ = new Timer (1000);
@@ -71,29 +71,28 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 	void Start ()
 	{
 		// -----------------------------------
-		Vector3 bottom_size = bottom_.GetComponent<Renderer> ().bounds.size;
-		Debug.Log ("size: " + bottom_size);
+		Vector3 plane_size = plane_.GetComponent<Renderer>().bounds.size;
+		Debug.Log ("size: " + plane_size);
 
-		MAP_WIDTH = (int)Mathf.Round (bottom_size.x / Tetris.BLOCK_WIDTH);
-		// MAP_HEIGHT = (int)Mathf.Round(bottom_size.z / BLOCK_HEIGHT);
-		MAP_HEIGHT =
-			(int)((top_.transform.position.y - bottom_.transform.position.y) / Tetris.BLOCK_HEIGHT);
+		MAP_WIDTH = (int)Mathf.Round (plane_size.x / Tetris.BLOCK_WIDTH);
+		MAP_HEIGHT = (int)Mathf.Round(plane_size.z / Tetris.BLOCK_HEIGHT);
 
 		Debug.Log ("width=" + MAP_WIDTH + ", height=" + MAP_HEIGHT);
 
 		// -----------------------------------
 		// to adapt all kinds of situation, we should use transform matrix instead of following things...
+		/*
 		offset_ = new Vector3 (-bottom_.transform.position.x + (MAP_WIDTH * Tetris.BLOCK_WIDTH) / 2 - Tetris.BLOCK_WIDTH / 2,
 		                       -bottom_.transform.position.y - (Tetris.BLOCK_HEIGHT / 2),
 		                       0);
+		*/
+		plane_offset_ = new Vector3 (-plane_size.x / 2, 0, -plane_size.z / 2);
+		cube_offset_ = new Vector3 (Tetris.BLOCK_WIDTH/2, 0, Tetris.BLOCK_HEIGHT/2);
 
 		// -----------------------------------
-		tetris_ = Tetris.Create(MAP_WIDTH, MAP_HEIGHT, offset_, this);
+		tetris_ = Tetris.Create(MAP_WIDTH, MAP_HEIGHT, this);
 
 		map_ = tetris_.map; // new int[MAP_HEIGHT, MAP_WIDTH];
-
-		// Debug.Log (BLOCK_HEIGHT);
-		Debug.Log ("offset: " + offset_);
 
 		block_map_ = new GameObject[MAP_HEIGHT, MAP_WIDTH];
 		// initialize the matrix that can transform global coordination to local coordination
@@ -114,7 +113,7 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 		int block_height = block.GetLength(0);
 		int block_width = block.GetLength(1);
 
-		cur_player_.cube_parent.transform.position = tetris_.MapToWorld(pos);
+		cur_player_.cube_parent.transform.position = MapToWorld(pos);
 
 		GameObject obj;
 		for (int r = 0; r < block_height; ++r) {
@@ -123,7 +122,7 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 					continue;
 				}
 				obj = (GameObject) Instantiate(
-					cube_, tetris_.MapToWorld(pos + new Vector2(c, -r)), Quaternion.identity);
+					cube_, MapToWorld(pos + new Vector2(c, -r)), Quaternion.identity);
 				obj.transform.parent = cur_player_.cube_parent.transform;
 				cur_player_.cube_list.Add(obj);
 			}
@@ -135,7 +134,7 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 	}
 
 	public void OnPlayerPositionChanged (Vector2 old_pos, Vector2 new_pos) {
-		cur_player_.cube_parent.transform.position = tetris_.MapToWorld(new_pos);
+		cur_player_.cube_parent.transform.position = MapToWorld(new_pos);
 	}
 	
 	public void OnPlayerRotateChanged (Vector2 pos, int old_rot, int new_rot, int[,] block) {
@@ -153,7 +152,7 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 		GameObject obj = block_map_[old_row, old_col];
 		block_map_[old_row, old_col] = null;
 		block_map_[new_row, new_col] = obj;
-		obj.transform.position = tetris_.MapToWorld(new_pos);
+		obj.transform.position = MapToWorld(new_pos);
 	}
 	
 	public void OnCubeDestroyed(Vector2 pos) {
@@ -172,7 +171,7 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 		}
 
 		block_map_[row, col] = (GameObject) Instantiate(
-			cube_, tetris_.MapToWorld(pos), Quaternion.identity);
+			cube_, MapToWorld(pos), Quaternion.identity);
 	}
 
 	// Update is called once per frame
@@ -245,7 +244,7 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 		begin_y += row_height;
 
 		// mouse2map
-		Vector2 map_mouse = tetris_.WorldToMap (Camera.main.ScreenToWorldPoint (mouse_pos));
+		Vector2 map_mouse = WorldToMap (Camera.main.ScreenToWorldPoint (mouse_pos));
 		GUI.Label (new Rect (begin_x, begin_y, row_width, row_height),
 		           string.Format ("map_mouse=({0,5:F}, {1,5:F})",
 		               map_mouse.y, map_mouse.x));
@@ -293,5 +292,38 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 		}
 
 		return false;
+	}
+
+	public Vector3 MapToTetris (Vector2 point)
+	{
+		return new Vector3 (
+			point.x * Tetris.BLOCK_WIDTH, point.y * Tetris.BLOCK_HEIGHT, 0);
+	}
+	
+	public Vector2 TetrisToMap (Vector3 point)
+	{
+		float col = Mathf.Round (point.x / Tetris.BLOCK_WIDTH);
+		float row = Mathf.Round (point.y / Tetris.BLOCK_HEIGHT);
+		return new Vector2 (col, row);
+	}
+
+	public Vector3 WorldToTetris (Vector3 point)
+	{
+		return point + offset_;
+	}
+	
+	public Vector3 TetrisToWorld (Vector3 point)
+	{
+		return point - offset_;
+	}
+	
+	public Vector2 WorldToMap (Vector3 pos)
+	{
+		return TetrisToMap (WorldToTetris (pos));
+	}
+	
+	public Vector3 MapToWorld (Vector2 pos)
+	{
+		return TetrisToWorld (MapToTetris (pos));
 	}
 }

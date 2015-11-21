@@ -17,13 +17,18 @@ public class InputController : MonoBehaviour
 	}
 
 	public GameObject plane_;
-	private Vector3 plane_offset_;
+	public int plane_width_;
+	public int plane_height_;
 	public GameObject cube_;
+
+	private Vector3 plane_offset_;
 	private Vector3 cube_offset_;
+	// private Quaternion plane_rotation_;
+	// private Quaternion cube_rotation_;
 
 	// player
-	private int cur_player_row_ = 0;
-	private int cur_player_col_ = 0;
+	// private int cur_player_row_ = 0;
+	// private int cur_player_col_ = 0;
 
 	// cube(what's the difference!? T_T)
 	private int cur_cube_row_ = 0;
@@ -39,15 +44,20 @@ public class InputController : MonoBehaviour
 	void Start ()
 	{
 		// get map size
-		Vector3 plane_size = plane_.GetComponent<Renderer> ().bounds.size;
-		map_width_ = (int)Mathf.Round (plane_size.x / tile_width_);
-		map_height_ = (int)Mathf.Round (plane_size.z / tile_width_);
+		// TODO: not rotation independent
+		// Vector3 plane_size = plane_.GetComponent<Renderer> ().bounds.size;
+		// Debug.Log ("plane-size: " + plane_size);
+		map_width_ = (int)Mathf.Round (plane_width_ / tile_width_);
+		map_height_ = (int)Mathf.Round (plane_height_ / tile_width_);
 
-		plane_offset_ = new Vector3 (-plane_size.x / 2, 0, -plane_size.z / 2);
+		plane_offset_ = new Vector3 (-plane_width_ / 2, 0, -plane_height_ / 2);
 		cube_offset_ = new Vector3 (tile_width_ / 2, 0, tile_width_ / 2);
+		// plane_rotation_ = plane_.transform.rotation;
 
 		Debug.Log (string.Format ("map info: width={0,5:F}, height={1,5:F}",
 		                         map_width_, map_height_));
+		Debug.Log (string.Format ("offset info: plane={0}, cube={1}",
+		                          plane_offset_.ToString(), cube_offset_.ToString()));
 
 		// initialize map
 		map_ = new int[map_height_, map_width_];
@@ -58,12 +68,14 @@ public class InputController : MonoBehaviour
 		}
 
 		// put cube
-		Position cube_pos = World2Map(cube_.transform.position);
-		cur_cube_row_ = cube_pos.row;
-		cur_cube_col_ = cube_pos.col;
+		// Position cube_pos = World2Map(cube_.transform.position);
+		// cur_cube_row_ = cube_pos.row;
+		// cur_cube_col_ = cube_pos.col;
+
 		MoveCube ();
 
 		Debug.Log ("cube pos: " + cube_.transform.position);
+		Debug.Log (string.Format ("row={0}, col={1}", cur_cube_row_, cur_cube_col_));
 	}
 	
 	// Update is called once per frame
@@ -77,29 +89,60 @@ public class InputController : MonoBehaviour
 			// StartCoroutine (AnimationCoroutineByEdge ());
 		}
 
+		Position pos_delta = new Position(0, 0);
+
 		// LEFT
 		if (!flipping && Input.GetKeyDown (KeyCode.H)) {
-			Debug.Log ("left");
-			Move (0, -1);
+			// Debug.Log ("left");
+			if (CanMove (0, -1)) {
+				pos_delta.col += -1;
+			}
 		}
 		// RIGHT
 		if (!flipping && Input.GetKeyDown (KeyCode.L)) {
-			Debug.Log ("right");
-			Move (0, 1);
+			// Debug.Log ("right");
+			if (CanMove (0, 1)) {
+				pos_delta.col += 1;
+			}
 		}
 		// UP
 		if (!flipping && Input.GetKeyDown (KeyCode.K)) {
-			Debug.Log ("up");
-			Move (1, 0);
+			// Debug.Log ("up");
+			if (CanMove (1, 0)) {
+				pos_delta.row += 1;
+			}
 		}
 		// DOWN
 		if (!flipping && Input.GetKeyDown (KeyCode.J)) {
-			Debug.Log ("down");
-			Move (-1, 0);
+			// Debug.Log ("down");
+			if (CanMove (-1, 0)) {
+				pos_delta.row += -1;
+			}
 		}
 
 		// MoveCube ();
-		FlipToPos(cur_player_row_, cur_player_col_);
+		/*
+		 * if (flipping) {
+			return;
+		}*/
+		
+		if (pos_delta.row != 0 ||
+		    pos_delta.col != 0) {
+			StartCoroutine(FlipToPos(pos_delta));
+		}
+
+		// rotate the plane
+		TestPlaneRotate();
+	}
+
+	private void TestPlaneRotate() {
+		// Vector3 delta_change = new Vector3(.1f, .1f, .1f);
+		// plane_.transform.Rotate(delta_change);
+		// cube_.transform.Rotate(delta_change);
+		plane_.transform.RotateAround(plane_.transform.position, new Vector3(0.1f, 1.0f, 0.0f), 0.5f);
+		cube_.transform.RotateAround(plane_.transform.position, new Vector3(0.1f, 1.0f, 0.0f), 0.5f);
+		// cube_offset_.transform.RotateAround(plane_.transform.position, new Vector3(0.1f, 1.0f, 0.0f), 0.5f);
+		// plane_offset_.transform.RotateAround(plane_.transform.position, new Vector3(0.1f, 1.0f, 0.0f), 0.5f);
 	}
 
 	private bool InMap (int row, int col)
@@ -115,15 +158,30 @@ public class InputController : MonoBehaviour
 		return true;
 	}
 
-	private void Move (int row, int col)
+	private bool CanMove (int row, int col)
 	{
-		int new_row = cur_player_row_ + row;
-		int new_col = cur_player_col_ + col;
+		int new_row = cur_cube_row_ + row;
+		int new_col = cur_cube_col_ + col;
 		if (InMap (new_row, new_col)) {
-			cur_player_row_ = new_row;
-			cur_player_col_ = new_col;
+			return true;
+			// cur_player_row_ = new_row;
+			// cur_player_col_ = new_col;
 		}
+		return false;
 	}
+
+//	private bool CubePositionChanged() {
+//		if (cur_cube_row_ == cur_player_row_ &&
+//		    cur_cube_col_ == cur_player_col_) {
+//			return false;
+//		}
+//
+//		Debug.Log (string.Format("cube pos={0}, should be={1}",
+//		                         cube_.transform.position,
+//		                         Map2World(cur_player_row_, cur_player_col_, 0)));
+//
+//		return true;
+//	}
 
 	private void MoveCube ()
 	{
@@ -131,36 +189,51 @@ public class InputController : MonoBehaviour
 			return;
 		}
 
-		if (cur_cube_row_ == cur_player_row_ &&
-		    cur_cube_col_ == cur_player_col_) {
-			return;
-		}
+//		if (!CubePositionChanged()) {
+//			return;
+//		}
 
-		cube_.transform.position = Map2World (cur_player_row_, cur_player_col_, tile_width_ / 2);
+		cube_.transform.position = Map2World (cur_cube_row_, cur_cube_col_, tile_width_ / 2);
 		cube_.transform.rotation = plane_.transform.rotation;
 
-		cur_cube_row_ = cur_player_row_;
-		cur_cube_col_ = cur_player_col_;
+		// cur_cube_row_ = cur_player_row_;
+		// cur_cube_col_ = cur_player_col_;
 	}
 
-	private void FlipToPos (int row, int col)
+	/**
+	 * 
+	 * (-4, 5)
+	 * 
+	 */
+	private IEnumerator FlipToPos (Position delta_pos)
 	{
-		if (flipping) {
-			return;
+		int target_row = cur_cube_row_ + delta_pos.row;
+		int target_col = cur_cube_col_ + delta_pos.col;
+		int delta_row = delta_pos.row < 0 ? -1 : 1;
+		int delta_col = delta_pos.col < 0 ? -1 : 1;
+
+		Debug.Log (string.Format("delta pos: ({0}, {1}), row={2}, col={3}",
+		                         delta_pos.row, delta_pos.col, delta_row, delta_col));
+		// for (cur_cube_row_ += delta_row; cur_cube_row_ != target_row + delta_row; cur_cube_row_ += delta_row) {
+		while (cur_cube_row_ != target_row) {
+			cur_cube_row_ += delta_row;
+			yield return StartCoroutine(AnimationCoroutineByEdge (Map2World (cur_cube_row_, cur_cube_col_, 0.0f)));
 		}
 
-		if (cur_cube_row_ == cur_player_row_ &&
-		    cur_cube_col_ == cur_player_col_) {
-			return;
+		// for (cur_cube_col_ += delta_col; cur_cube_col_ != target_col + delta_col; cur_cube_col_ += delta_col) {
+		while (cur_cube_col_ != target_col) {
+			cur_cube_col_ += delta_col;
+			yield return StartCoroutine(AnimationCoroutineByEdge (Map2World (cur_cube_row_, cur_cube_col_, 0.0f)));
 		}
-		
-		StartCoroutine (AnimationCoroutineByEdge (Map2World (cur_player_row_, cur_player_col_, 0.0f)));
+
+
+		// StartCoroutine (AnimationCoroutineByEdge (Map2World (cur_cube_row_, cur_cube_col_, 0.0f)));
 	}
 
 	/**
 	 *
-	 * logic_pos = (col*width, height, row*height)
-	 * real_pos = logic_pos + (plane_offset + cube_offset)
+	 * logic_pos = (col*width, height, row*height);
+	 * real_pos = TransformPoint(logic_pos + (plane_offset + cube_offset));
 	 * 
 	 */
 	private Vector3 Map2World (int row, int col, float height)
@@ -170,6 +243,8 @@ public class InputController : MonoBehaviour
 		float z = row * tile_width_;
 		return plane_.transform.TransformPoint (
 			new Vector3 (x, y, z) + plane_offset_ + cube_offset_);
+			// new Vector3 (x, y, z) + new Vector3(-5.0f+0.5f, 0.0f, -4.3f+0.5f));
+			// new Vector3(0, 0, 0));
 	}
 
 	/**
@@ -180,7 +255,8 @@ public class InputController : MonoBehaviour
 	 */
 	private Position World2Map (Vector3 world_pos)
 	{
-		Vector3 logic_pos = world_pos - plane_offset_ - cube_offset_;
+		Vector3 logic_pos =
+			plane_.transform.InverseTransformPoint(world_pos - plane_offset_ - cube_offset_);
 		int row = (int)Mathf.Round (logic_pos.z / tile_width_);
 		int col = (int)Mathf.Round (logic_pos.x / tile_width_);
 		return new Position (row, col);
@@ -253,7 +329,7 @@ public class InputController : MonoBehaviour
 			// cube_.transform.position + new Vector3 (-1.0f, 0.0f, 0.5f));
 			target);
 
-		Debug.Log (cube_.transform.rotation + ", " + cube_.transform.rotation.eulerAngles + ", " + info.axis);
+		// Debug.Log (cube_.transform.rotation + ", " + cube_.transform.rotation.eulerAngles + ", " + info.axis);
 
 		float period = .5f;
 		float delta = 90.0f / (period / 0.05f);
@@ -265,9 +341,9 @@ public class InputController : MonoBehaviour
 		}
 
 		// FIXME
-		Position cube_pos = World2Map(cube_.transform.position);
-		cur_cube_row_ = cube_pos.row;
-		cur_cube_col_ = cube_pos.col;
+//		Position cube_pos = World2Map(cube_.transform.position);
+//		cur_cube_row_ = cube_pos.row;
+//		cur_cube_col_ = cube_pos.col;
 
 		flipping = false;
 	}
@@ -350,7 +426,7 @@ public class InputController : MonoBehaviour
 		// take care of scale
 		pos = trans.TransformPoint (pos);
 
-		Debug.Log ("orig-axis: " + EDGE_AXIS_LIST [edge]);
+		// Debug.Log ("orig-axis: " + EDGE_AXIS_LIST [edge]);
 		Vector3 axis = trans.TransformVector (EDGE_AXIS_LIST [edge]);
 		// Vector3 axis = trans.TransformDirection(EDGE_AXIS_LIST[edge]);
 
@@ -391,12 +467,23 @@ public class InputController : MonoBehaviour
 
 	void OnDrawGizmos ()
 	{
-//		Vector3 mouse_pos = Input.mousePosition;
-//		mouse_pos = Camera.main.ScreenToWorldPoint (new Vector3(mouse_pos.x, mouse_pos.y, Camera.main.nearClipPlane));
-		Gizmos.color = Color.yellow;
-//		Gizmos.DrawSphere(new Vector3(0.0f, 0.0f, 0.0f), 0.1f);
-		Gizmos.DrawSphere (cube_.transform.position + new Vector3 (-1.0f, 0.0f, 0.5f), 0.05f);
+		// DrawEdgeGizmos();
+		// DrawPlaneGizmos();
+	}
 
+	private void DrawPlaneGizmos() {
+		Gizmos.color = Color.red;
+		Vector3 pos = Map2World(0, 0, 0);
+		Gizmos.DrawSphere(pos, 0.05f);
+	}
+
+	private void DrawEdgeGizmos() {
+		//		Vector3 mouse_pos = Input.mousePosition;
+		//		mouse_pos = Camera.main.ScreenToWorldPoint (new Vector3(mouse_pos.x, mouse_pos.y, Camera.main.nearClipPlane));
+		Gizmos.color = Color.yellow;
+		//		Gizmos.DrawSphere(new Vector3(0.0f, 0.0f, 0.0f), 0.1f);
+		Gizmos.DrawSphere (cube_.transform.position + new Vector3 (-1.0f, 0.0f, 0.5f), 0.05f);
+		
 		Gizmos.color = Color.red;
 		EdgeInfo info = GetNearestEdge (
 			cube_.transform,
