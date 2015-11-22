@@ -31,8 +31,9 @@ public class InputController : MonoBehaviour
 	// private int cur_player_col_ = 0;
 
 	// cube(what's the difference!? T_T)
-	private int cur_cube_row_ = 0;
-	private int cur_cube_col_ = 0;
+	// private int cur_cube_row_ = 0;
+	// private int cur_cube_col_ = 0;
+	private Position cur_cube_pos_ = new Position(0, 0);
 
 	private int[,] map_;
 	private int map_width_;
@@ -75,7 +76,7 @@ public class InputController : MonoBehaviour
 		MoveCube ();
 
 		Debug.Log ("cube pos: " + cube_.transform.position);
-		Debug.Log (string.Format ("row={0}, col={1}", cur_cube_row_, cur_cube_col_));
+		Debug.Log (string.Format ("row={0}, col={1}", cur_cube_pos_.row, cur_cube_pos_.col));
 	}
 	
 	// Update is called once per frame
@@ -131,18 +132,22 @@ public class InputController : MonoBehaviour
 			StartCoroutine(FlipToPos(pos_delta));
 		}
 
+		// TODO: still can't handle this situation
 		// rotate the plane
-		TestPlaneRotate();
+		// TestPlaneRotate();
 	}
 
 	private void TestPlaneRotate() {
 		// Vector3 delta_change = new Vector3(.1f, .1f, .1f);
 		// plane_.transform.Rotate(delta_change);
 		// cube_.transform.Rotate(delta_change);
-		plane_.transform.RotateAround(plane_.transform.position, new Vector3(0.1f, 1.0f, 0.0f), 0.5f);
-		cube_.transform.RotateAround(plane_.transform.position, new Vector3(0.1f, 1.0f, 0.0f), 0.5f);
-		// cube_offset_.transform.RotateAround(plane_.transform.position, new Vector3(0.1f, 1.0f, 0.0f), 0.5f);
-		// plane_offset_.transform.RotateAround(plane_.transform.position, new Vector3(0.1f, 1.0f, 0.0f), 0.5f);
+
+		// plane_.transform.RotateAround(plane_.transform.position, new Vector3(0.1f, 1.0f, 0.0f), 0.5f);
+		// cube_.transform.RotateAround(plane_.transform.position, new Vector3(0.1f, 1.0f, 0.0f), 0.5f);
+
+		plane_.transform.position += new Vector3(0.0f, 0.01f, 0.0f);
+		cube_.transform.position += new Vector3(0.0f, 0.01f, 0.0f);
+
 	}
 
 	private bool InMap (int row, int col)
@@ -160,8 +165,8 @@ public class InputController : MonoBehaviour
 
 	private bool CanMove (int row, int col)
 	{
-		int new_row = cur_cube_row_ + row;
-		int new_col = cur_cube_col_ + col;
+		int new_row = cur_cube_pos_.row + row;
+		int new_col = cur_cube_pos_.col + col;
 		if (InMap (new_row, new_col)) {
 			return true;
 			// cur_player_row_ = new_row;
@@ -193,37 +198,32 @@ public class InputController : MonoBehaviour
 //			return;
 //		}
 
-		cube_.transform.position = Map2World (cur_cube_row_, cur_cube_col_, tile_width_ / 2);
+		cube_.transform.position = Map2World (cur_cube_pos_.row, cur_cube_pos_.col, tile_width_ / 2);
 		cube_.transform.rotation = plane_.transform.rotation;
 
 		// cur_cube_row_ = cur_player_row_;
 		// cur_cube_col_ = cur_player_col_;
 	}
 
-	/**
-	 * 
-	 * (-4, 5)
-	 * 
-	 */
 	private IEnumerator FlipToPos (Position delta_pos)
 	{
-		int target_row = cur_cube_row_ + delta_pos.row;
-		int target_col = cur_cube_col_ + delta_pos.col;
+		int target_row = cur_cube_pos_.row + delta_pos.row;
+		int target_col = cur_cube_pos_.col + delta_pos.col;
 		int delta_row = delta_pos.row < 0 ? -1 : 1;
 		int delta_col = delta_pos.col < 0 ? -1 : 1;
 
 		Debug.Log (string.Format("delta pos: ({0}, {1}), row={2}, col={3}",
 		                         delta_pos.row, delta_pos.col, delta_row, delta_col));
 		// for (cur_cube_row_ += delta_row; cur_cube_row_ != target_row + delta_row; cur_cube_row_ += delta_row) {
-		while (cur_cube_row_ != target_row) {
-			cur_cube_row_ += delta_row;
-			yield return StartCoroutine(AnimationCoroutineByEdge (Map2World (cur_cube_row_, cur_cube_col_, 0.0f)));
+		while (cur_cube_pos_.row != target_row) {
+			cur_cube_pos_.row += delta_row;
+			yield return StartCoroutine(AnimationCoroutineByEdge (Map2World (cur_cube_pos_.row, cur_cube_pos_.col, 0.0f)));
 		}
 
 		// for (cur_cube_col_ += delta_col; cur_cube_col_ != target_col + delta_col; cur_cube_col_ += delta_col) {
-		while (cur_cube_col_ != target_col) {
-			cur_cube_col_ += delta_col;
-			yield return StartCoroutine(AnimationCoroutineByEdge (Map2World (cur_cube_row_, cur_cube_col_, 0.0f)));
+		while (cur_cube_pos_.row != target_col) {
+			cur_cube_pos_.col += delta_col;
+			yield return StartCoroutine(AnimationCoroutineByEdge (Map2World (cur_cube_pos_.row, cur_cube_pos_.col, 0.0f)));
 		}
 
 
@@ -336,6 +336,8 @@ public class InputController : MonoBehaviour
 		for (float rotated = 0.0f; rotated < 90.0f; rotated += delta) {
 			// 0.0 ~ 1.0
 			// Quaternion rot = Quaternion.Slerp(cube_.transform.rotation, target_rot, passed / period);
+			// FIXME: this won't be correct if cube is moving
+			//        because neither the info.center nor the info.axis will be correct if cube's position has been changed.
 			cube_.transform.RotateAround (info.center, info.axis, delta);
 			yield return new WaitForSeconds (0.05f);
 		}

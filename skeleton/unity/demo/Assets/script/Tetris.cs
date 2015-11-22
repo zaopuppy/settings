@@ -4,19 +4,19 @@ using System.Collections;
 public class Tetris
 {
 	public interface Callback {
-		void OnPlayerCreated(Vector2 pos, int[,] block); //int type, int rot);
+		void OnPlayerCreated(Position pos, int[,] block); //int type, int rot);
 		
 		void OnPlayerDestroyed();
 		
-		void OnPlayerPositionChanged (Vector2 old_pos, Vector2 new_pos);
+		void OnPlayerPositionChanged (Position old_pos, Position new_pos);
 		
-		void OnPlayerRotateChanged (Vector2 pos, int old_rot, int new_rot, int[,] block);
+		void OnPlayerRotateChanged (Position pos, int old_rot, int new_rot, int[,] block);
 		
-		void OnCubePositionChanged (Vector2 old_pos, Vector2 new_pos);
+		void OnCubePositionChanged (Position old_pos, Position new_pos);
 		
-		void OnCubeDestroyed(Vector2 pos);
+		void OnCubeDestroyed(Position pos);
 		
-		void OnCubeCreated(Vector2 pos);
+		void OnCubeCreated(Position pos);
 	}
 
 	public struct Position
@@ -29,11 +29,15 @@ public class Tetris
 			this.row = r;
 			this.col = c;
 		}
+
+		public static Position operator +(Position v1, Position v2) {
+			return new Position(v1.row + v2.row, v1.col + v2.col);
+		}
 	};
 
 	public struct Player
 	{
-		public Vector2 pos;
+		public Position pos;
 		public int type;
 		public int rot;
 		public int[,] block_data;
@@ -52,7 +56,7 @@ public class Tetris
 	public const int BLOCK_I = 6;
 	public const int COLOR_1 = 0;
 	public readonly static int[,,,] BLOCK_LIST = {
-	// L
+		// L
 		{
 			{ { 1, 0, 0, 0 }, { 1, 1, 1, 0 }, { 1, 1, 0, 0 }, { 0, 0, 1, 0 }, },
 			{ { 1, 0, 0, 0 }, { 1, 0, 0, 0 }, { 0, 1, 0, 0 }, { 1, 1, 1, 0 }, },
@@ -60,7 +64,7 @@ public class Tetris
 			{ { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, },
 		},
 		
-	// J
+		// J
 		{
 			{ { 0, 1, 0, 0 }, { 1, 0, 0, 0 }, { 1, 1, 0, 0 }, { 1, 1, 1, 0 }, },
 			{ { 0, 1, 0, 0 }, { 1, 1, 1, 0 }, { 1, 0, 0, 0 }, { 0, 0, 1, 0 }, },
@@ -68,7 +72,7 @@ public class Tetris
 			{ { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, },
 		},
 		
-	// T
+		// T
 		{
 			{ { 1, 1, 1, 0 }, { 0, 1, 0, 0 }, { 0, 1, 0, 0 }, { 1, 0, 0, 0 }, },
 			{ { 0, 1, 0, 0 }, { 1, 1, 0, 0 }, { 1, 1, 1, 0 }, { 1, 1, 0, 0 }, },
@@ -76,7 +80,7 @@ public class Tetris
 			{ { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, },
 		},
 		
-	// O
+		// O
 		{
 			{ { 1, 1, 0, 0 }, { 1, 1, 0, 0 }, { 1, 1, 0, 0 }, { 1, 1, 0, 0 }, },
 			{ { 1, 1, 0, 0 }, { 1, 1, 0, 0 }, { 1, 1, 0, 0 }, { 1, 1, 0, 0 }, },
@@ -84,7 +88,7 @@ public class Tetris
 			{ { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, },
 		},
 		
-	// Z
+		// Z
 		{
 			{ { 1, 1, 0, 0 },{ 0, 1, 0, 0 },{ 1, 1, 0, 0 },{ 0, 1, 0, 0 }, },
 			{ { 0, 1, 1, 0 },{ 1, 1, 0, 0 },{ 0, 1, 1, 0 },{ 1, 1, 0, 0 }, },
@@ -92,7 +96,7 @@ public class Tetris
 			{ { 0, 0, 0, 0 },{ 0, 0, 0, 0 },{ 0, 0, 0, 0 },{ 0, 0, 0, 0 }, },
 		},
 		
-	// S
+		// S
 		{
 			{ { 0, 1, 1, 0 },{ 1, 0, 0, 0 },{ 0, 1, 1, 0 },{ 1, 0, 0, 0 }, },
 			{ { 1, 1, 0, 0 },{ 1, 1, 0, 0 },{ 1, 1, 0, 0 },{ 1, 1, 0, 0 }, },
@@ -100,7 +104,7 @@ public class Tetris
 			{ { 0, 0, 0, 0 },{ 0, 0, 0, 0 },{ 0, 0, 0, 0 },{ 0, 0, 0, 0 }, },
 		},
 		
-	// I
+		// I
 		{
 			{ { 1, 0, 0, 0 },{ 1, 1, 1, 1 },{ 1, 0, 0, 0 },{ 1, 1, 1, 1 }, },
 			{ { 1, 0, 0, 0 },{ 0, 0, 0, 0 },{ 1, 0, 0, 0 },{ 0, 0, 0, 0 }, },
@@ -160,26 +164,26 @@ public class Tetris
 			}
 		}
 
-		player_.pos = new Vector2(-1, -1);
+		player_.pos = new Position(0, 0);
 	}
 
 	public void start () {
 		SpawnBlock ();
 	}
 
-	public void Move(Vector2 mov) {
+	public void Move(Position mov) {
 		if (player_.dead) {
 			return;
 		}
 
-		Vector2 old_pos = player_.pos;
-		Vector2 new_pos = player_.pos + mov;
+		Position old_pos = player_.pos;
+		Position new_pos = player_.pos + mov;
 		if (CanPut(new_pos, player_.block_data)) {
 			player_.pos = new_pos;
 			// playerPositionChangeDelegate_(old_pos, new_pos);
 			callback_.OnPlayerPositionChanged(old_pos, new_pos);
 		} else {
-			if (mov.y != 0) {
+			if (mov.row != 0) {
 				Merge();
 				RemoveFullLines();
 				SpawnBlock();
@@ -192,7 +196,7 @@ public class Tetris
 			return;
 		}
 
-		Vector2 pos = player_.pos;
+		Position pos = player_.pos;
 		int type = player_.type;
 		int old_rot = player_.rot;
 		int rot = NextRotate(old_rot);
@@ -211,7 +215,7 @@ public class Tetris
 	}
 
 	private void Merge () {
-		Vector2 pos = player_.pos;
+		Position pos = player_.pos;
 		int[,] block = player_.block_data;
 		int block_height = block.GetLength (0);
 		int block_width = block.GetLength (1);
@@ -220,13 +224,12 @@ public class Tetris
 				if (block [r, c] != 0) {
 					// 10 score for every cube
 					score_ += 10;
-					int new_row = (int)pos.y - r;
-					int new_col = (int)pos.x + c;
+					int new_row = (int)pos.row - r;
+					int new_col = (int)pos.col + c;
 					int old_type = map_[new_row, new_col];
 					int new_type = block[r, c];
 					map_[new_row, new_col] = new_type;
-					// cubeCreateDelegate_(new Vector2(new_col, new_row));
-					callback_.OnCubeCreated(new Vector2(new_col, new_row));
+					callback_.OnCubeCreated(new Position(new_row, new_col));
 				}
 			}
 		}
@@ -251,10 +254,8 @@ public class Tetris
 						}
 						map_ [line_to_copy, c] = map_ [r, c];
 						map_ [r, c] = 0;
-						// cubePositionChangeDelegate_(
-						// 	new Vector2(c, r), new Vector2(c, line_to_copy));
 						callback_.OnCubePositionChanged(
-							new Vector2(c, r), new Vector2(c, line_to_copy));
+							new Position(r, c), new Position(line_to_copy, c));
 					}
 					line_to_copy += 1;
 				}
@@ -267,8 +268,7 @@ public class Tetris
 				// clear current line
 				for (int c = 0; c < map_width_; ++c) {
 					map_ [r, c] = 0;
-					// cubeDestroyDelegate_(new Vector2(c, r));
-					callback_.OnCubeDestroyed(new Vector2(c, r));
+					callback_.OnCubeDestroyed(new Position(r, c));
 				}
 			}
 		}
@@ -284,7 +284,7 @@ public class Tetris
 		for (int r = 0; r < map_height_; ++r) {
 			for (int c = 0; c < map_width_; ++c) {
 				map_[r, c] = 0;
-				callback_.OnCubeDestroyed(new Vector2(c, r));
+				callback_.OnCubeDestroyed(new Position(r, c));
 			}
 		}
 
@@ -293,7 +293,7 @@ public class Tetris
 	}
 
 	public void SpawnBlock () {
-		Vector2 pos = new Vector2 (map_width_ / 2, map_height_ - 1);
+		Position pos = new Position (map_height_ - 1, map_width_ / 2);
 		int type = GetRandomBlock ();
 		int rot = GetRandomRotate ();
 
@@ -345,7 +345,7 @@ public class Tetris
 		return ret;
 	}
 
-	public bool CanPut (Vector2 pos, int[,] block)
+	public bool CanPut (Position pos, int[,] block)
 	{
 		int block_height = block.GetLength (0);
 		int block_width = block.GetLength (1);
@@ -354,9 +354,9 @@ public class Tetris
 				if (block [r, c] == 0) {
 					continue;
 				}
-				int new_row = (int)pos.y - r;
-				int new_col = (int)pos.x + c;
-				if (!InMap (new Vector2 (new_col, new_row))) {
+				int new_row = (int)pos.row - r;
+				int new_col = (int)pos.col + c;
+				if (!InMap (new Position(new_row, new_col))) {
 					return false;
 				}
 				if (map_ [new_row, new_col] != 0) {
@@ -368,13 +368,13 @@ public class Tetris
 		return true;
 	}
 	
-	public bool InMap (Vector2 pos)
+	public bool InMap (Position pos)
 	{
-		if (pos.x < 0 || pos.x >= map_width_) {
+		if (pos.col < 0 || pos.col >= map_width_) {
 			return false;
 		}
 		
-		if (pos.y < 0 || pos.y >= map_height_) {
+		if (pos.row < 0 || pos.row >= map_height_) {
 			return false;
 		}
 		
