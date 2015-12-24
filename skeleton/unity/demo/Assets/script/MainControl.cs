@@ -64,6 +64,8 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 		cur_player_.cube_list.Clear ();
 		foreach (GameObject o in obj_array) {
 			Destroy (o);
+			// yield return StartCoroutine(TestAnimationCubeDestory(o));
+			// StartCoroutine(TestAnimationCubeDestory(o));
 		}
 	}
     
@@ -118,13 +120,26 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 		tetris_.start();
 	}
 
-	private bool in_animation_ = false;
-	private IEnumerator TestAnimation() {
-		in_animation_ = true;
+	private int in_animation_ = 0;
+	private IEnumerator TestAnimationWait() {
+		++in_animation_;
 
 		yield return new WaitForSeconds(5.0f);
 
-		in_animation_ = false;
+		--in_animation_;
+	}
+
+	private IEnumerator TestAnimationCubeDestory(GameObject cube) {
+		++in_animation_;
+
+		while (cube.transform.localScale.x > 0.1f) {
+			cube.transform.localScale -= new Vector3(0.1f, 0.1f, 0.1f);
+			yield return new WaitForSeconds(0.05f);
+		}
+
+		Destroy(cube);
+
+		--in_animation_;
 	}
 
 	public void OnPlayerCreated(Tetris.Position pos, int[,] block) {
@@ -146,8 +161,7 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 				cur_player_.cube_list.Add(obj);
 			}
 		}
-
-		StartCoroutine(TestAnimation());
+		// StartCoroutine(TestAnimation());
 	}
 
 	public void OnPlayerDestroyed() {
@@ -157,10 +171,78 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 	public void OnPlayerPositionChanged (Tetris.Position old_pos, Tetris.Position new_pos) {
 		cur_player_.cube_parent.transform.position = MapToWorld(new_pos);
 	}
+
+	private List<Tetris.Position> GetCubePositionList(Tetris.Position pos, int[,] block) {
+		List<Tetris.Position> l = new List<Tetris.Position>();
+
+		int block_height = block.GetLength(0);
+		int block_width = block.GetLength(1);
+		for (int r = 0; r < block_height; ++r) {
+			for (int c = 0; c < block_width; ++c) {
+				if (block[r, c] == 0) {
+					continue;
+				}
+				l.Add(pos + new Tetris.Position(-r, c));
+			}
+		}
+
+		return l;
+	}
 	
-	public void OnPlayerRotateChanged (Tetris.Position pos, int old_rot, int new_rot, int[,] block) {
-		DestroyPlayer();
-		OnPlayerCreated(pos, block);
+	private IEnumerator AnimeDestroy(GameObject obj) {
+		++in_animation_;
+
+		float start = Time.time;
+		float interval = 0.2f;
+		while (Time.time <= start+interval) {
+			obj.transform.localScale = Vector3.Slerp(Vector3.one, Vector3.zero, (Time.time-start)/interval);
+			yield return new WaitForSeconds(0.05f);
+		}
+		
+		Destroy(obj);
+		--in_animation_;
+	}
+
+	private IEnumerator FlyTo(Transform trans, Tetris.Position old_pos, Tetris.Position new_pos) {
+		if (old_pos.Equals(new_pos)) {
+			yield break;
+		}
+
+		++in_animation_;
+
+		Vector3 old_pos_world = MapToWorld(old_pos);
+		Vector3 new_pos_world = MapToWorld(new_pos);
+		float start = Time.time;
+		float interval = 0.2f;
+		while (Time.time <= start+interval) {
+			trans.position = Vector3.Slerp(old_pos_world, new_pos_world, (Time.time-start)/interval);
+			yield return new WaitForSeconds(0.05f);
+		}
+
+		trans.position = new_pos_world;
+		--in_animation_;
+	}
+	
+	public void OnPlayerRotateChanged (Tetris.Position pos, int old_rot, int[,] old_block, int new_rot, int[,] new_block) {
+		// RotatePlayer(pos, old_block, new_block);
+		// TO BE CONTINUED
+		List<Tetris.Position> old_pos_list = GetCubePositionList(pos, old_block);
+		List<Tetris.Position> new_pos_list = GetCubePositionList(pos, new_block);
+		if (old_pos_list.Count != new_pos_list.Count) {
+			Debug.Log ("WRONG!!!!");
+			return;
+		}
+
+		if (old_pos_list.Count != cur_player_.cube_list.Count) {
+			Debug.Log ("WRONG!!!!");
+			return;
+		}
+
+		List<GameObject> l = cur_player_.cube_list;
+
+		for (int i = 0; i < old_pos_list.Count; ++i) {
+			StartCoroutine(FlyTo(l[i].transform, old_pos_list[i], new_pos_list[i]));
+		}
 	}
 	
 	public void OnCubePositionChanged (Tetris.Position old_pos, Tetris.Position new_pos) {
@@ -181,7 +263,8 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 		int col = (int)pos.col;
 		GameObject obj = block_map_[row, col];
 		block_map_[row, col] = null;
-		Destroy(obj);
+		// Destroy(obj);
+		StartCoroutine(AnimeDestroy(obj));
 	}
 	
 	public void OnCubeCreated(Tetris.Position pos) {
@@ -198,13 +281,13 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 	// Update is called once per frame
 	void Update ()
 	{
-		if (in_animation_) {
+		if (in_animation_ > 0) {
 			return;
 		}
 
 		if (Input.GetKeyDown(KeyCode.R)) {
 			tetris_.Reset();
-
+			in_animation_ = 0;
 		}
 
 		if (Input.GetKeyDown(KeyCode.Space)) {
@@ -218,8 +301,11 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 		long delta_in_ms = (long)Mathf.Round (Time.deltaTime * 1000);
 		step_timer_.update (delta_in_ms);
 
+		tetris_.check();
+
 		if (step_timer_.isTimeUp ()) {
 			tetris_.Move(new Tetris.Position(-1, 0));
+			// tetris_.Step();
 		}
 
 		if (Input.GetKeyDown (KeyCode.UpArrow)) {
@@ -314,36 +400,6 @@ public class MainControl : MonoBehaviour, Tetris.Callback
 
 		return false;
 	}
-
-//	public Vector3 MapToTetris (Vector2 point)
-//	{
-//		return new Vector3 (
-//			point.x * Tetris.BLOCK_WIDTH, point.y * Tetris.BLOCK_HEIGHT, 0);
-//	}
-//	
-//	public Vector2 TetrisToMap (Vector3 point)
-//	{
-//		float col = Mathf.Round (point.x / Tetris.BLOCK_WIDTH);
-//		float row = Mathf.Round (point.y / Tetris.BLOCK_HEIGHT);
-//		return new Vector2 (col, row);
-//	}
-
-
-//	public Vector3 WorldToTetris (Vector3 point)
-//	{
-//		// return point + offset_;
-//
-//		Vector3 logic_pos = plane_.transform.InverseTransformPoint(point) -  plane_offset_ - cube_offset_;
-//
-//		return new Vector3(logic_pos.x / );
-//	}
-//	
-//	public Vector3 TetrisToWorld (Vector3 point)
-//	{
-//		int row = Mathf.Round(point.x);
-//		int col = Mathf.Round(point.z);
-//		return point - offset_;
-//	}
 
 	/**
 	 * 

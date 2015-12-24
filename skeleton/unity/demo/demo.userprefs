@@ -1,10 +1,9 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/script/MainControl.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/script/Tetris.cs">
     <Files>
-      <File FileName="../PlayGround/Assets/script/InputController.cs" Line="57" Column="1" />
-      <File FileName="Assets/script/MainControl.cs" Line="129" Column="2" />
-      <File FileName="Assets/script/Tetris.cs" Line="188" Column="23" />
+      <File FileName="Assets/script/MainControl.cs" Line="192" Column="56" />
+      <File FileName="Assets/script/Tetris.cs" Line="39" Column="29" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

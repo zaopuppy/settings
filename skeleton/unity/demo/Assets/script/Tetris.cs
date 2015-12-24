@@ -10,7 +10,7 @@ public class Tetris
 		
 		void OnPlayerPositionChanged (Position old_pos, Position new_pos);
 		
-		void OnPlayerRotateChanged (Position pos, int old_rot, int new_rot, int[,] block);
+		void OnPlayerRotateChanged (Position pos, int old_rot, int[,] old_block, int new_rot, int[,] new_block);
 		
 		void OnCubePositionChanged (Position old_pos, Position new_pos);
 		
@@ -32,6 +32,21 @@ public class Tetris
 
 		public static Position operator +(Position v1, Position v2) {
 			return new Position(v1.row + v2.row, v1.col + v2.col);
+		}
+
+		public override bool Equals (object obj)
+		{
+			return base.Equals (obj);
+		}
+
+		public override int GetHashCode ()
+		{
+			int hash = 13;
+
+			hash = (hash*7) + row.GetHashCode();
+			hash = (hash*7) + col.GetHashCode();
+
+			return hash;
 		}
 	};
 
@@ -144,6 +159,8 @@ public class Tetris
 	private readonly int map_width_;
 	Player player_ = new Player ();
 
+	private bool need_remove_lines_ = false;
+
 	private int score_ = 0;
 
 	public int score {
@@ -171,6 +188,22 @@ public class Tetris
 		SpawnBlock ();
 	}
 
+	public void check() {
+		if (need_remove_lines_) {
+			Debug.Log ("need remove lines");
+			need_remove_lines_ = false;
+			// RemoveFullLines();
+			PackLines();
+			SpawnBlock();
+		}
+	}
+
+//	public void Step() {
+//		 else {
+//			Move (new Position(-1, 0));
+//		}
+//	}
+
 	public void Move(Position mov) {
 		if (player_.dead) {
 			return;
@@ -185,8 +218,13 @@ public class Tetris
 		} else {
 			if (mov.row != 0) {
 				Merge();
-				RemoveFullLines();
-				SpawnBlock();
+				if (RemoveFullLines()) {
+					need_remove_lines_ = true;
+				} else {
+					SpawnBlock();
+				}
+//				RemoveFullLines();
+//				SpawnBlock();
 			}
 		}
 	}
@@ -201,6 +239,7 @@ public class Tetris
 		int old_rot = player_.rot;
 		int rot = NextRotate(old_rot);
 
+		int[,] old_block = player_.block_data;
 		int[,] new_block = GetBlockData(type, rot);
 
 		if (!CanPut(pos, new_block)) {
@@ -211,7 +250,7 @@ public class Tetris
 		player_.rot = rot;
 
 		// playerRotateChangeDelegate_(pos, old_rot, rot, new_block);
-		callback_.OnPlayerRotateChanged(pos, old_rot, rot, new_block);
+		callback_.OnPlayerRotateChanged(pos, old_rot, old_block, rot, new_block);
 	}
 
 	private void Merge () {
@@ -237,7 +276,70 @@ public class Tetris
 		callback_.OnPlayerDestroyed();
 	}
 
-	private void RemoveFullLines () {
+	private bool NeedRemoveFullLines() {
+		for (int r = 0; r < map_height_; ++r) {
+			if (IsEmptyLine(r)) {
+				return false;
+			}
+
+			if (IsFullLine(r)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private bool RemoveFullLines() {
+		int line_to_delete = 0;
+		for (int r = 0; r < map_height_; ++r) {
+			if (IsEmptyLine(r)) {
+				break;
+			}
+
+			if (!IsFullLine(r)) {
+				continue;
+			}
+
+			++line_to_delete;
+
+			for (int c = 0; c < map_width_; ++c) {
+				map_[r, c] = 0;
+				callback_.OnCubeDestroyed(new Position(r, c));
+			}
+		}
+
+		score_ += ((int)Mathf.Pow(2, line_to_delete) - 1) * 100;
+
+		return line_to_delete > 0;
+	}
+
+	private void PackLines() {
+		int line_to_copy = -1;
+		for (int r = 0; r < map_height_; ++r) {
+			if (IsEmptyLine (r)) {
+				// break;
+				if (line_to_copy < 0) {
+					line_to_copy = r;
+				}
+			} else {
+				if (line_to_copy >= 0) {
+					// move upper line down
+					for (int c = 0; c < map_width_; ++c) {
+						if (map_ [r, c] == 0) {
+							continue;
+						}
+						map_ [line_to_copy, c] = map_ [r, c];
+						map_ [r, c] = 0;
+						callback_.OnCubePositionChanged(
+							new Position(r, c), new Position(line_to_copy, c));
+					}
+					++line_to_copy;
+				}
+			}
+		}
+	}
+
+	private void RemoveFullLinesAndMove () {
 		int line_to_copy = -1;
 		int line_to_delete = 0;
 		for (int r = 0; r < map_height_; ++r) {
@@ -283,8 +385,10 @@ public class Tetris
 	public void Reset() {
 		for (int r = 0; r < map_height_; ++r) {
 			for (int c = 0; c < map_width_; ++c) {
-				map_[r, c] = 0;
-				callback_.OnCubeDestroyed(new Position(r, c));
+				if (map_[r, c] != 0) {
+					map_[r, c] = 0;
+					callback_.OnCubeDestroyed(new Position(r, c));
+				}
 			}
 		}
 
@@ -293,6 +397,7 @@ public class Tetris
 	}
 
 	public void SpawnBlock () {
+		Debug.Log ("spawn block");
 		Position pos = new Position (map_height_ - 1, map_width_ / 2);
 		int type = GetRandomBlock ();
 		int rot = GetRandomRotate ();
@@ -300,6 +405,7 @@ public class Tetris
 		int[,] block = GetBlockData (type, rot);
 		if (!CanPut (pos, block)) {
 			// TODO: DEAD FLAG
+			Debug.Log ("can't put, dead");
 			player_.block_data = null;
 			player_.dead = true;
 			return;
