@@ -1,13 +1,15 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/script/Tetris.cs">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/script/MainControl.cs">
     <Files>
-      <File FileName="Assets/script/MainControl.cs" Line="192" Column="56" />
-      <File FileName="Assets/script/Tetris.cs" Line="39" Column="29" />
+      <File FileName="Assets/script/MainControl.cs" Line="305" Column="3" />
+      <File FileName="Assets/script/Tetris.cs" Line="387" Column="42" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore />
+    <BreakpointStore>
+      <Breakpoint file="/Volumes/Data/source/settings/skeleton/unity/demo/Assets/script/Tetris.cs" line="408" />
+    </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
 </Properties>

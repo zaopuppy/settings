@@ -205,23 +205,39 @@ public class InputController : MonoBehaviour
 		// cur_cube_col_ = cur_player_col_;
 	}
 
+	private int compare(int v1, int v2) {
+		int delta = v1 - v2;
+		if (delta == 0) {
+			return 0;
+		} else if (delta > 0) {
+			return 1;
+		} else {
+			return -1;
+		}
+	}
+
 	private IEnumerator FlipToPos (Position delta_pos)
 	{
 		int target_row = cur_cube_pos_.row + delta_pos.row;
 		int target_col = cur_cube_pos_.col + delta_pos.col;
-		int delta_row = delta_pos.row < 0 ? -1 : 1;
-		int delta_col = delta_pos.col < 0 ? -1 : 1;
+
+		int delta_row = compare(delta_pos.row, 0);
+		int delta_col = compare(delta_pos.col, 0);
 
 		Debug.Log (string.Format("delta pos: ({0}, {1}), row={2}, col={3}",
 		                         delta_pos.row, delta_pos.col, delta_row, delta_col));
 		// for (cur_cube_row_ += delta_row; cur_cube_row_ != target_row + delta_row; cur_cube_row_ += delta_row) {
 		while (cur_cube_pos_.row != target_row) {
+			Debug.Log (string.Format("current pos=({0}, {1}), target pos=({2}, {3})",
+				cur_cube_pos_.row, cur_cube_pos_.col, target_row, target_col));
 			cur_cube_pos_.row += delta_row;
 			yield return StartCoroutine(AnimationCoroutineByEdge (Map2World (cur_cube_pos_.row, cur_cube_pos_.col, 0.0f)));
 		}
 
 		// for (cur_cube_col_ += delta_col; cur_cube_col_ != target_col + delta_col; cur_cube_col_ += delta_col) {
-		while (cur_cube_pos_.row != target_col) {
+		while (cur_cube_pos_.col != target_col) {
+			Debug.Log (string.Format("current pos=({0}, {1}), target pos=({2}, {3})",
+				cur_cube_pos_.row, cur_cube_pos_.col, target_row, target_col));
 			cur_cube_pos_.col += delta_col;
 			yield return StartCoroutine(AnimationCoroutineByEdge (Map2World (cur_cube_pos_.row, cur_cube_pos_.col, 0.0f)));
 		}
