@@ -1,6 +1,7 @@
 package com.example.zero.androidskeleton;
 
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -10,15 +11,16 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.zero.androidskeleton.bt.BluetoothService;
+import com.example.zero.androidskeleton.ui.SelectDeviceActivity;
+import com.example.zero.androidskeleton.utils.UiUtils;
 
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
-
-    private BluetoothService mBtService = null;
 
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -40,25 +42,34 @@ public class MainActivity extends AppCompatActivity {
                 int new_state = bundle.getInt(
                         BluetoothAdapter.EXTRA_STATE,
                         BluetoothAdapter.STATE_OFF);
-                makeToast(String.format(
+                UiUtils.makeToast(getApplicationContext(), String.format(
                         Locale.US, "%d --> %d", old_state, new_state));
-            }
+            } // else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+            //    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            //    log("device: " + device.getName() + ", " + device.getAddress());
+            //}
         }
     };
+
+    private TextView mLogView;
+
+    private void log(String msg) {
+        mLogView.append(msg + '\n');
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        registerReceiver(
-                mReceiver,
-                new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
-
         setContentView(R.layout.activity_main);
-
-        mBtService = new BluetoothService(getApplicationContext());
-
         setupUiComp();
+
+        {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+            filter.addAction(BluetoothDevice.ACTION_FOUND);
+            registerReceiver(mReceiver, filter);
+        }
     }
 
     @Override
@@ -68,11 +79,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupUiComp() {
+        mLogView = (TextView) findViewById(R.id.log_view);
+
         Button start_bt_button = (Button) findViewById(R.id.start_bt_service_button);
         start_bt_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startBtService();
+                Intent intent = new Intent(MainActivity.this, SelectDeviceActivity.class);
+                startActivity(intent);
             }
         });
 
@@ -86,18 +100,16 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void makeToast(String s) {
-        Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
-    }
-
     private void startBtService() {
-        BluetoothService.Code code = mBtService.start();
-        if (code == BluetoothService.Code.BT_NOT_ENABLED) {
-            makeToast("Bluetooth is not enabled");
-            Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivity(intent);
-            return;
-        }
+        //log("start scan: " + mBtService.startDiscovery());
+        //BluetoothService.Code code = mBtService.start();
+        //if (code == BluetoothService.Code.BT_NOT_ENABLED) {
+        //    makeToast("Bluetooth is not enabled");
+        //    Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+        //    startActivity(intent);
+        //    return;
+        //}
+    }
 
     private void stopBtService() {
         //
