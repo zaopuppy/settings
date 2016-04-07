@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">AndroidSkeleton</string>
+    <string name="title_activity_show_device">ShowDeviceActivity</string>
 </resources>

@@ -9,11 +9,29 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.example.zero.androidskeleton.ui.SelectDeviceActivity">
 
+    <!--<ScrollView-->
+        <!--android:id="@+id/log_view_scroll"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="80dp">-->
+        <!--<TextView-->
+            <!--android:id="@+id/log_view"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="hello" />-->
+    <!--</ScrollView>-->
+
     <Button
         android:id="@+id/scan_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Scan"/>
+
+    <Button
+        android:id="@+id/clean_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/scan_button"
+        android:text="Clean"/>
 
     <ScrollView
         android:layout_width="match_parent"

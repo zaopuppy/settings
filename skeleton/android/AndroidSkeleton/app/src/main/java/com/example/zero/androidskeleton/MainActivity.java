@@ -6,17 +6,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.support.v4.app.ShareCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.example.zero.androidskeleton.bt.BluetoothService;
 import com.example.zero.androidskeleton.ui.SelectDeviceActivity;
-import com.example.zero.androidskeleton.utils.UiUtils;
+import com.example.zero.androidskeleton.utils.Utils;
 
 import java.util.Locale;
 
@@ -42,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
                 int new_state = bundle.getInt(
                         BluetoothAdapter.EXTRA_STATE,
                         BluetoothAdapter.STATE_OFF);
-                UiUtils.makeToast(getApplicationContext(), String.format(
+                Utils.makeToast(getApplicationContext(), String.format(
                         Locale.US, "%d --> %d", old_state, new_state));
             } // else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
             //    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);

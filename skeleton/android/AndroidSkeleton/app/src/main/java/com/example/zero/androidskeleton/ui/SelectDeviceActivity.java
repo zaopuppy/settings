@@ -1,46 +1,54 @@
 package com.example.zero.androidskeleton.ui;
 
 import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
-import android.content.BroadcastReceiver;
-import android.content.Context;
+import android.bluetooth.*;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanResult;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
 import com.example.zero.androidskeleton.R;
-import com.example.zero.androidskeleton.bt.BluetoothService;
-import com.example.zero.androidskeleton.utils.UiUtils;
+import com.example.zero.androidskeleton.bt.BluetoothLeService;
+import com.example.zero.androidskeleton.utils.Utils;
 
-import java.io.IOException;
-import java.util.UUID;
+import java.util.List;
 
-public class SelectDeviceActivity extends Activity {
+public class SelectDeviceActivity extends AppCompatActivity {
+    private static final String TAG = "SelectDeviceActivity";
 
     private SimpleArrayAdapter mListViewAdapter;
-    //private final ArrayList<DeviceInfo> mDeviceList = new ArrayList<>(4);
 
-    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+    private void log(final String msg) {
+        //runOnUiThread(new Runnable() {
+        //    @Override
+        //    public void run() {
+        //        mLogView.append(msg + '\n');
+        //    }
+        //});
+        Log.i(TAG, msg + '\n');
+    }
+
+    private final ScanCallback mScanCallback = new ScanCallback() {
         @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent == null) {
-                return;
-            }
+        public void onScanResult(int callbackType, ScanResult result) {
+            BluetoothDevice device = result.getDevice();
+            mListViewAdapter.add(device);
+        }
 
-            String action = intent.getAction();
-            if (action == null) {
-                return;
-            }
+        @Override
+        public void onBatchScanResults(List<ScanResult> results) {
+            super.onBatchScanResults(results);
+        }
 
-            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                mListViewAdapter.add(device);
-            }
+        @Override
+        public void onScanFailed(int errorCode) {
+            super.onScanFailed(errorCode);
         }
     };
 
@@ -53,22 +61,32 @@ public class SelectDeviceActivity extends Activity {
         setContentView(R.layout.activity_select_device);
         setupUiComp();
 
-        registerReceiver(mReceiver, new IntentFilter(BluetoothDevice.ACTION_FOUND));
     }
 
     @Override
-    protected void onDestroy() {
-        unregisterReceiver(mReceiver);
+    protected void onPause() {
+        BluetoothLeService.INSTANCE.stopScan(mScanCallback);
 
-        super.onDestroy();
+        super.onPause();
     }
 
     private void setupUiComp() {
-        Button scan_button = (Button) findViewById(R.id.scan_button);
+        final Button scan_button = (Button) findViewById(R.id.scan_button);
         scan_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                BluetoothService.INSTANCE.startDiscovery();
+                scan_button.setEnabled(false);
+                // mListViewAdapter.clear();
+                BluetoothLeService.INSTANCE.startScan(mScanCallback);
+            }
+        });
+
+        final Button clean_button = (Button) findViewById(R.id.clean_button);
+        clean_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                scan_button.setEnabled(true);
+                BluetoothLeService.INSTANCE.stopScan(mScanCallback);
             }
         });
 
@@ -77,31 +95,18 @@ public class SelectDeviceActivity extends Activity {
         device_list_view.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // cancel discovery first
-                BluetoothService.INSTANCE.cancelDiscovery();
+                BluetoothLeService.INSTANCE.stopScan(mScanCallback);
 
                 // get selected info
                 final BluetoothDevice device = mListViewAdapter.getItem(position);
-                //UiUtils.makeToast(
-                //        getApplicationContext(),
-                //        // "position=" + position + ", id=" + id);
-                //        "device: " + device.getName() + ", " + device.getAddress());
+                log("device: " + device.getName() + ", " + device.getAddress());
 
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            UiUtils.makeToast(getApplicationContext(), "begin");
+                Intent intent = new Intent(SelectDeviceActivity.this, ShowDeviceActivity.class);
+                Bundle bundle = new Bundle();
+                bundle.putParcelable("device", device);
 
-                            BluetoothSocket socket = device.createRfcommSocketToServiceRecord(UUID.randomUUID());
-                            socket.connect();
-                            UiUtils.makeToast(getApplicationContext(), "success");
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            UiUtils.makeToast(getApplicationContext(), "failed: " + e.getMessage());
-                        }
-                    }
-                }).start();
+
+                // device.connectGatt(getApplicationContext(), false, mGattCallback);
             }
         });
     }
