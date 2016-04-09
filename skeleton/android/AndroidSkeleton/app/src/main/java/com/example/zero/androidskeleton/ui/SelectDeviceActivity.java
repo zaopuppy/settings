@@ -1,6 +1,5 @@
 package com.example.zero.androidskeleton.ui;
 
-import android.app.Activity;
 import android.bluetooth.*;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
@@ -12,10 +11,8 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
-import android.widget.TextView;
 import com.example.zero.androidskeleton.R;
-import com.example.zero.androidskeleton.bt.BluetoothLeService;
-import com.example.zero.androidskeleton.utils.Utils;
+import com.example.zero.androidskeleton.bt.BtLeService;
 
 import java.util.List;
 
@@ -43,7 +40,7 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
         @Override
         public void onBatchScanResults(List<ScanResult> results) {
-            super.onBatchScanResults(results);
+            //
         }
 
         @Override
@@ -65,48 +62,53 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
-        BluetoothLeService.INSTANCE.stopScan(mScanCallback);
+        BtLeService.INSTANCE.stopScan(mScanCallback);
 
         super.onPause();
     }
 
     private void setupUiComp() {
         final Button scan_button = (Button) findViewById(R.id.scan_button);
+        assert scan_button != null;
         scan_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 scan_button.setEnabled(false);
                 // mListViewAdapter.clear();
-                BluetoothLeService.INSTANCE.startScan(mScanCallback);
+                BtLeService.INSTANCE.startScan(mScanCallback);
             }
         });
 
         final Button clean_button = (Button) findViewById(R.id.clean_button);
+        assert clean_button != null;
         clean_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 scan_button.setEnabled(true);
-                BluetoothLeService.INSTANCE.stopScan(mScanCallback);
+                BtLeService.INSTANCE.stopScan(mScanCallback);
             }
         });
 
         ListView device_list_view = (ListView) findViewById(R.id.device_list_view);
+        assert device_list_view != null;
         device_list_view.setAdapter(mListViewAdapter);
         device_list_view.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                BluetoothLeService.INSTANCE.stopScan(mScanCallback);
+                BtLeService.INSTANCE.stopScan(mScanCallback);
 
                 // get selected info
                 final BluetoothDevice device = mListViewAdapter.getItem(position);
                 log("device: " + device.getName() + ", " + device.getAddress());
 
-                Intent intent = new Intent(SelectDeviceActivity.this, ShowDeviceActivity.class);
+
                 Bundle bundle = new Bundle();
                 bundle.putParcelable("device", device);
 
+                Intent intent = new Intent(SelectDeviceActivity.this, ShowDeviceActivity.class);
+                intent.putExtras(bundle);
 
-                // device.connectGatt(getApplicationContext(), false, mGattCallback);
+                startActivity(intent);
             }
         });
     }

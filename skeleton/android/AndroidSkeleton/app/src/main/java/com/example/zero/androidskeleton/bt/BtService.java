@@ -9,13 +9,13 @@ import android.os.Bundle;
 /**
  * Created by zero on 4/4/16.
  */
-public class BluetoothService {
+public class BtService {
 
     private static class MyBroadcastReceiver extends BroadcastReceiver {
 
-        private final BluetoothService mService;
+        private final BtService mService;
 
-        public MyBroadcastReceiver(BluetoothService service) {
+        public MyBroadcastReceiver(BtService service) {
             mService = service;
         }
 
@@ -51,9 +51,9 @@ public class BluetoothService {
         BT_ENABLED,
     }
 
-    public static final BluetoothService INSTANCE = new BluetoothService();
+    public static final BtService INSTANCE = new BtService();
 
-    public BluetoothService() {
+    public BtService() {
         //mContext = context.getApplicationContext();
     }
 

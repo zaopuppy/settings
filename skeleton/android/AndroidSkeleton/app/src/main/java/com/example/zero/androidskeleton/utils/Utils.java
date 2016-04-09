@@ -28,4 +28,8 @@ public class Utils {
         return builder.toString();
     }
 
+    public static boolean isFlagSet(int prop, int flag) {
+        return (prop & flag) > 0;
+    }
+
 }

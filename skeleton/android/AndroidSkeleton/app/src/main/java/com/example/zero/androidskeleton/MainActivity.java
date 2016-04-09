@@ -99,8 +99,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void startBtService() {
         //log("start scan: " + mBtService.startDiscovery());
-        //BluetoothService.Code code = mBtService.start();
-        //if (code == BluetoothService.Code.BT_NOT_ENABLED) {
+        //BtService.Code code = mBtService.start();
+        //if (code == BtService.Code.BT_NOT_ENABLED) {
         //    makeToast("Bluetooth is not enabled");
         //    Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
         //    startActivity(intent);

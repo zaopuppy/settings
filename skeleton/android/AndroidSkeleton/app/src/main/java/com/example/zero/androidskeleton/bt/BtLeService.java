@@ -3,18 +3,17 @@ package com.example.zero.androidskeleton.bt;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
-import android.content.Context;
 
 /**
  * Created by zero on 2016/4/7.
  */
-public class BluetoothLeService {
-    public static final BluetoothLeService INSTANCE = new BluetoothLeService();
+public class BtLeService {
+    public static final BtLeService INSTANCE = new BtLeService();
 
     private final BluetoothAdapter mBtAdapter;
     private final BluetoothLeScanner mBtLeScanner;
 
-    private BluetoothLeService() {
+    private BtLeService() {
         mBtAdapter = BluetoothAdapter.getDefaultAdapter();
         mBtLeScanner = mBtAdapter.getBluetoothLeScanner();
     }
