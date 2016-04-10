@@ -3,6 +3,8 @@ package com.example.zero.androidskeleton.utils;
 import android.content.Context;
 import android.widget.Toast;
 
+import java.util.UUID;
+
 /**
  * Created by zero on 2016/4/4.
  */

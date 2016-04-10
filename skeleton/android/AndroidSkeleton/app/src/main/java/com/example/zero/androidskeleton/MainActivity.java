@@ -79,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
         mLogView = (TextView) findViewById(R.id.log_view);
 
         Button start_bt_button = (Button) findViewById(R.id.start_bt_service_button);
+        assert start_bt_button != null;
         start_bt_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -89,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         Button stop_bt_button = (Button) findViewById(R.id.stop_bt_service_button);
+        assert stop_bt_button != null;
         stop_bt_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

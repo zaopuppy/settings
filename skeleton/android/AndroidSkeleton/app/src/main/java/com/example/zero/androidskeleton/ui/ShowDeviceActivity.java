@@ -13,6 +13,10 @@ import com.example.zero.androidskeleton.bt.BtLeService;
 import com.example.zero.androidskeleton.bt.BtLeDevice;
 import com.example.zero.androidskeleton.utils.Utils;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.util.UUID;
+
 public class ShowDeviceActivity extends AppCompatActivity {
     private static final String TAG = "ShowDeviceActivity";
 
@@ -41,6 +45,9 @@ public class ShowDeviceActivity extends AppCompatActivity {
     }
 
     private void setUiComp() {
+        final TextView devDetailView = (TextView) findViewById(R.id.device_detail);
+        assert devDetailView != null;
+
         TextView nameView = (TextView) findViewById(R.id.name);
         assert nameView != null;
         nameView.setText(mDevice.getName());
@@ -61,20 +68,68 @@ public class ShowDeviceActivity extends AppCompatActivity {
                 }
 
                 for (BluetoothGattService service: mDevice.getServiceList()) {
-                    Log.i(TAG, "service: " + service.getUuid());
+                    Log.i(TAG, "service: " + BtLeService.uuidStr(service.getUuid()));
                     for (final BluetoothGattCharacteristic characteristic: service.getCharacteristics()) {
-                        mDevice.readCharacteristic(characteristic, new BtLeDevice.Listener<byte[]>() {
+                        final int uuid16 = BtLeService.extractBtUuid(characteristic.getUuid());
+                        if (BtLeService.isReservedUuid(uuid16)) {
+                            continue;
+                        }
+
+                        if (uuid16 != 0xfff1) {
+                            continue;
+                        }
+
+
+                        BtLeDevice.Listener<byte[]> l = new BtLeDevice.Listener<byte[]>() {
                             @Override
-                            public void onResult(byte[] result) {
-                                if (result == null) {
-                                    // Utils.makeToast(getApplicationContext(), "read null returned");
-                                    Log.e(TAG, "uuid=" + characteristic.getUuid() + " null returned");
+                            public void onResult(final byte[] result) {
+                                if (BtLeService.isReservedUuid(uuid16)) {
+                                    handleReservedCharacteristic(uuid16, result);
                                     return;
                                 }
-                                // Utils.makeToast(getApplicationContext(), "value read length: " + result.length);
-                                Log.e(TAG, "uuid=" + characteristic.getUuid() + " length=" + result.length + ", value=" + Utils.b16encode(result));
+                                if (result == null || result.length == 0) {
+                                    Log.e(TAG, "uuid=" + BtLeService.uuidStr(characteristic.getUuid()) + " result=" + (result == null ? "<null>" : "empty"));
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            devDetailView.append("uuid=" + BtLeService.uuidStr(characteristic.getUuid()) + " result=<null>\n");
+                                        }
+                                    });
+                                    return;
+                                }
+                                Log.e(TAG, "uuid=" + BtLeService.uuidStr(characteristic.getUuid()) + " length=" + result.length + ", value=" + Utils.b16encode(result));
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        devDetailView.append(
+                                                "uuid=" + BtLeService.uuidStr(characteristic.getUuid())
+                                                        + " length=" + result.length + ", value=" + Utils.b16encode(result) + '\n');
+                                    }
+                                });
+                                // mDevice.readCharacteristic(characteristic, this);
                             }
-                        });
+
+                            private void handleReservedCharacteristic(int uuid, final byte[] result) {
+                                switch (uuid) {
+                                    case BtLeService.UUID_DEVICE_NAME:
+                                        runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                devDetailView.append("Device Name: [" + new String(result, Charset.forName("GBK")));
+                                            }
+                                        });
+                                        break;
+                                    default:
+                                        // ignore
+                                        break;
+                                }
+                            }
+                        };
+
+                        // mDevice.readCharacteristic(characteristic, l);
+                        ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE/8);
+                        buffer.putLong(0x0A0000000000000BL);
+                        Log.e(TAG, "write: " + mDevice.writeCharacteristic(characteristic, buffer.array()));
                     }
                 }
             }

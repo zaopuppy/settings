@@ -8,7 +8,6 @@ import com.example.zero.androidskeleton.utils.Utils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -66,6 +65,7 @@ public class BtLeDevice extends BluetoothGattCallback {
      */
     private final Queue<ReadTask> mReadQueue = new ConcurrentLinkedQueue<>();
 
+    // FIXME: no need to use queue
     private final Queue<ReadTask> mWaitReadQueue = new ConcurrentLinkedQueue<>();
 
     /**
@@ -114,13 +114,9 @@ public class BtLeDevice extends BluetoothGattCallback {
         mGatt = mDevice.connectGatt(context, false, this);
     }
 
-    public boolean writeCharacteristic(BluetoothGattCharacteristic characteristic) {
-        //if (mCharacteristic == null) {
-        //    return false;
-        //}
-        //
-        //return mGatt.writeCharacteristic(mCharacteristic);
-        return false;
+    public boolean writeCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value) {
+        characteristic.setValue(value);
+        return mGatt.writeCharacteristic(characteristic);
     }
 
     public State getState() {
@@ -200,7 +196,7 @@ public class BtLeDevice extends BluetoothGattCallback {
 
         int prop = characteristic.getProperties();
         if (!Utils.isFlagSet(prop, BluetoothGattCharacteristic.PROPERTY_READ)) {
-            Log.d(TAG, "no read permission");
+            Log.d(TAG, "no read permission: " + BtLeService.uuidStr(characteristic.getUuid()));
             return false;
         }
 
@@ -227,8 +223,8 @@ public class BtLeDevice extends BluetoothGattCallback {
             return;
         }
 
-        if (innerReadCharacteristic(mGatt, task.characteristic)) {
-            Log.e(TAG, "failed to read characteristic");
+        if (!innerReadCharacteristic(mGatt, task.characteristic)) {
+            Log.e(TAG, "failed to read characteristic: " + BtLeService.uuidStr(task.characteristic.getUuid()));
             task.listener.onResult(null);
             fireRead();
         } else {
@@ -237,20 +233,27 @@ public class BtLeDevice extends BluetoothGattCallback {
     }
 
     public void readCharacteristic(BluetoothGattCharacteristic characteristic, Listener<byte[]> listener) {
-        Log.d(TAG, "readCharacteristic: " + characteristic.getUuid());
+        Log.d(TAG, "readCharacteristic: " + BtLeService.uuidStr(characteristic.getUuid()));
         mReadQueue.offer(new ReadTask(characteristic, listener));
         fireRead();
     }
 
+    // 128bit
+    // 0x00000000000000000000000000020304
+    //
+    // 64bit, 8bytes
+    // 0x0A0000000000000B
+    //
     // FIXME: Are all these callback called in the same thread? if not, there will be some problem of this
     @Override
     public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-        Log.d(TAG, "onCharacteristicRead");
-        Log.d(TAG, "characteristic uuid=" + characteristic.getUuid());
+        Log.d(TAG, "onCharacteristicRead: " + BtLeService.uuidStr(characteristic.getUuid()));
 
         ReadTask task = mWaitReadQueue.poll();
         if (!task.characteristic.equals(characteristic)) {
-            throw new IllegalStateException("expect=" + characteristic.getUuid() + ", actual=" + task.characteristic.getUuid());
+            throw new IllegalStateException(
+                    "expect=" + BtLeService.uuidStr(characteristic.getUuid())
+                            + ", actual=" + BtLeService.uuidStr(task.characteristic.getUuid()));
         }
         task.listener.onResult(characteristic.getValue());
 
@@ -259,7 +262,7 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     @Override
     public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-        Log.d(TAG, "onCharacteristicWrite");
+        Log.d(TAG, "onCharacteristicWrite: " + status);
     }
 
     @Override
