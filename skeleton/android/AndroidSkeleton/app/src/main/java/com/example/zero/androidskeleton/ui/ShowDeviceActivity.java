@@ -67,71 +67,57 @@ public class ShowDeviceActivity extends AppCompatActivity {
                     return;
                 }
 
-                for (BluetoothGattService service: mDevice.getServiceList()) {
+                BluetoothGattCharacteristic characteristic1 = null;
+                BluetoothGattCharacteristic characteristic2 = null;
+                BluetoothGattCharacteristic characteristic3 = null;
+                BluetoothGattCharacteristic characteristic4 = null;
+
+                for (BluetoothGattService service : mDevice.getServiceList()) {
                     Log.i(TAG, "service: " + BtLeService.uuidStr(service.getUuid()));
-                    for (final BluetoothGattCharacteristic characteristic: service.getCharacteristics()) {
+
+                    for (final BluetoothGattCharacteristic characteristic : service.getCharacteristics()) {
                         final int uuid16 = BtLeService.extractBtUuid(characteristic.getUuid());
                         if (BtLeService.isReservedUuid(uuid16)) {
                             continue;
                         }
 
-                        if (uuid16 != 0xfff1) {
-                            continue;
+                        switch (uuid16) {
+                            case 0xfff1:
+                                characteristic1 = characteristic;
+                                break;
+                            case 0xfff2:
+                                characteristic2 = characteristic;
+                                break;
+                            case 0xfff3:
+                                characteristic3 = characteristic;
+                                break;
+                            case 0xfff4:
+                                characteristic4 = characteristic;
+                                break;
+                            default:
+                                // ignore
+                                break;
                         }
-
-
-                        BtLeDevice.Listener<byte[]> l = new BtLeDevice.Listener<byte[]>() {
-                            @Override
-                            public void onResult(final byte[] result) {
-                                if (BtLeService.isReservedUuid(uuid16)) {
-                                    handleReservedCharacteristic(uuid16, result);
-                                    return;
-                                }
-                                if (result == null || result.length == 0) {
-                                    Log.e(TAG, "uuid=" + BtLeService.uuidStr(characteristic.getUuid()) + " result=" + (result == null ? "<null>" : "empty"));
-                                    runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            devDetailView.append("uuid=" + BtLeService.uuidStr(characteristic.getUuid()) + " result=<null>\n");
-                                        }
-                                    });
-                                    return;
-                                }
-                                Log.e(TAG, "uuid=" + BtLeService.uuidStr(characteristic.getUuid()) + " length=" + result.length + ", value=" + Utils.b16encode(result));
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        devDetailView.append(
-                                                "uuid=" + BtLeService.uuidStr(characteristic.getUuid())
-                                                        + " length=" + result.length + ", value=" + Utils.b16encode(result) + '\n');
-                                    }
-                                });
-                                // mDevice.readCharacteristic(characteristic, this);
-                            }
-
-                            private void handleReservedCharacteristic(int uuid, final byte[] result) {
-                                switch (uuid) {
-                                    case BtLeService.UUID_DEVICE_NAME:
-                                        runOnUiThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                devDetailView.append("Device Name: [" + new String(result, Charset.forName("GBK")));
-                                            }
-                                        });
-                                        break;
-                                    default:
-                                        // ignore
-                                        break;
-                                }
-                            }
-                        };
-
-                        // mDevice.readCharacteristic(characteristic, l);
-                        ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE/8);
-                        buffer.putLong(0x0A0000000000000BL);
-                        Log.e(TAG, "write: " + mDevice.writeCharacteristic(characteristic, buffer.array()));
                     }
                 }
+
+                mDevice.makeNotify(characteristic4);
+
+                ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE/8);
+                buffer.putLong(0x0A0000000000000BL);
+                final BluetoothGattCharacteristic tempChara = characteristic4;
+                mDevice.writeCharacteristic(characteristic1, buffer.array(), new BtLeDevice.Listener<Boolean>() {
+                    @Override
+                    public void onResult(Boolean result) {
+                        Log.e(TAG, "write result: " + result);
+                        //mDevice.readCharacteristic(tempChara, new BtLeDevice.Listener<byte[]>() {
+                        //    @Override
+                        //    public void onResult(byte[] result) {
+                        //        Log.e(TAG, "read result: " + Utils.b16encode(result));
+                        //    }
+                        //});
+                    }
+                });
             }
         });
 

@@ -1,14 +1,19 @@
 package com.example.zero.androidskeleton.bt;
 
-import android.bluetooth.*;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.util.Log;
+
 import com.example.zero.androidskeleton.utils.Utils;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.*;
 
 /**
  * Created by zero on 2016/4/8.
@@ -16,6 +21,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class BtLeDevice extends BluetoothGattCallback {
 
     private static final String TAG = "BtLeDevice";
+
+    //private final ThreadPoolExecutor mExecutor;
 
     public enum State {
         DISCONNECTED,
@@ -40,38 +47,138 @@ public class BtLeDevice extends BluetoothGattCallback {
     private BluetoothGatt mGatt = null;
     //private BluetoothGattCharacteristic mCharacteristic;
 
-    private static class ReadTask {
+
+    private interface Task {
+        boolean exec();
+        void onReadResult(BluetoothGattCharacteristic characteristic, int status);
+        void onWriteResult(BluetoothGattCharacteristic characteristic, int status);
+    }
+
+    private static class ReadTask implements Task {
         private final BluetoothGattCharacteristic characteristic;
         private final Listener<byte[]> listener;
+        private final BluetoothGatt gatt;
 
-        private ReadTask(BluetoothGattCharacteristic characteristic, Listener<byte[]> listener) {
+        private ReadTask(
+            BluetoothGatt gatt,
+            BluetoothGattCharacteristic characteristic,
+            Listener<byte[]> listener) {
+            this.gatt = gatt;
             this.characteristic = characteristic;
             this.listener = listener;
         }
-    }
 
-    private static class WriteTask {
-        private final Listener<Integer> listener;
+        @Override
+        public boolean exec() {
+            if (!innerReadCharacteristic(gatt, characteristic)) {
+                return false;
+            }
 
-        private WriteTask(Listener<Integer> listener) {
-            this.listener = listener;
+            return true;
+        }
+
+        @Override
+        public void onReadResult(BluetoothGattCharacteristic characteristic, int status) {
+            if (!this.characteristic.equals(characteristic)) {
+                throw new IllegalStateException(
+                    "expect=" + BtLeService.uuidStr(this.characteristic.getUuid())
+                        + ", actual=" + BtLeService.uuidStr(characteristic.getUuid()));
+            }
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                listener.onResult(null);
+                return;
+            }
+
+            listener.onResult(characteristic.getValue());
+        }
+
+        @Override
+        public void onWriteResult(BluetoothGattCharacteristic characteristic, int status) {
+            throw new IllegalStateException("unexpected write result");
         }
     }
 
-    /**
-     * read queue for one operation every time
-     *
-     * TODO: do we need a lock?
-     */
-    private final Queue<ReadTask> mReadQueue = new ConcurrentLinkedQueue<>();
+    private static class WriteTask implements Task {
 
-    // FIXME: no need to use queue
-    private final Queue<ReadTask> mWaitReadQueue = new ConcurrentLinkedQueue<>();
+        private final BluetoothGatt gatt;
+        private final BluetoothGattCharacteristic characteristic;
+        private final byte[] data;
+        private final Listener<Boolean> listener;
 
-    /**
-     * same reason as read queue
-     */
-    private final List<WriteTask> onWriteQueue = new ArrayList<>(8);
+        private WriteTask(
+            BluetoothGatt gatt,
+            BluetoothGattCharacteristic characteristic,
+            byte[] data,
+            Listener<Boolean> listener) {
+            this.gatt = gatt;
+            this.characteristic = characteristic;
+            this.data = data;
+            this.listener = listener;
+        }
+
+        @Override
+        public boolean exec() {
+            return innerWriteCharacteristic(gatt, characteristic, data);
+        }
+
+        @Override
+        public void onReadResult(BluetoothGattCharacteristic characteristic, int status) {
+            throw new IllegalStateException("unexpected read result");
+        }
+
+        @Override
+        public void onWriteResult(BluetoothGattCharacteristic characteristic, int status) {
+            if (!this.characteristic.equals(characteristic)) {
+                throw new IllegalStateException(
+                    "expect=" + BtLeService.uuidStr(this.characteristic.getUuid())
+                        + ", actual=" + BtLeService.uuidStr(characteristic.getUuid()));
+            }
+
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                listener.onResult(false);
+                return;
+            }
+
+            listener.onResult(true);
+        }
+    }
+
+    private final Object mTaskLock = new Object();
+    private final Queue<Task> mTaskQueue = new ConcurrentLinkedQueue<>();
+    private Task mCurrentTask = null;
+
+    private void processTask() {
+        synchronized (mTaskLock) {
+            while (mCurrentTask == null) {
+                Task task = mTaskQueue.poll();
+                if (task == null) {
+                    Log.d(TAG, "empty task queue");
+                    return;
+                }
+
+                if (task.exec()) {
+                    mCurrentTask = task;
+                } else {
+                    Log.e(TAG, "failed to execute task");
+                }
+            }
+        }
+    }
+
+    ///**
+    // * read queue for one operation every time
+    // *
+    // * TODO: do we need a lock?
+    // */
+    //private final Queue<ReadTask> mReadQueue = new ConcurrentLinkedQueue<>();
+    //
+    //// FIXME: no need to use queue
+    //private final Queue<ReadTask> mWaitReadQueue = new ConcurrentLinkedQueue<>();
+    //
+    ///**
+    // * same reason as read queue
+    // */
+    //private final List<WriteTask> onWriteQueue = new ArrayList<>(8);
 
     /**
      * current saved read listener
@@ -100,6 +207,8 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     public BtLeDevice(BluetoothDevice device) {
         mDevice = device;
+        //mExecutor = new ThreadPoolExecutor(
+        //    1, 1, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<Runnable>(2));
     }
 
     public String getName() {
@@ -114,10 +223,10 @@ public class BtLeDevice extends BluetoothGattCallback {
         mGatt = mDevice.connectGatt(context, false, this);
     }
 
-    public boolean writeCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value) {
-        characteristic.setValue(value);
-        return mGatt.writeCharacteristic(characteristic);
-    }
+    //public boolean writeCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value) {
+    //    characteristic.setValue(value);
+    //    return mGatt.writeCharacteristic(characteristic);
+    //}
 
     public State getState() {
         return mState;
@@ -191,12 +300,29 @@ public class BtLeDevice extends BluetoothGattCallback {
         setState(State.READY);
     }
 
-    private static boolean innerReadCharacteristic(
-            BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+    public boolean makeNotify(BluetoothGattCharacteristic characteristic) {
+        //int prop = characteristic.getProperties();
+        //if (Utils.isFlagSet(prop, BluetoothGattCharacteristic.PROPERTY_NOTIFY)) {
+        //    Log.d(TAG, BtLeService.uuidStr(characteristic.getUuid()) + " already notify");
+        //    return true;
+        //}
+
+        return mGatt.setCharacteristicNotification(characteristic, true);
+    }
+
+    private static boolean checkProperties(
+        BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int expectProp) {
 
         int prop = characteristic.getProperties();
-        if (!Utils.isFlagSet(prop, BluetoothGattCharacteristic.PROPERTY_READ)) {
-            Log.d(TAG, "no read permission: " + BtLeService.uuidStr(characteristic.getUuid()));
+
+        Log.d(TAG,
+            "checkProperties uuid=" + BtLeService.uuidStr(characteristic.getUuid())
+                + ", prop=" + prop
+                + ", expect-prop=" + expectProp);
+
+        Log.d(TAG, "current prop=" + prop);
+        if (!Utils.isFlagSet(prop, expectProp)) {
+            Log.d(TAG, "not expect prop: " + BtLeService.uuidStr(characteristic.getUuid()));
             return false;
         }
 
@@ -207,35 +333,41 @@ public class BtLeDevice extends BluetoothGattCallback {
                 return false;
             }
         }
+
+        return true;
+    }
+
+    private static boolean innerReadCharacteristic(
+        BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+
+        if (!checkProperties(gatt, characteristic, BluetoothGattCharacteristic.PROPERTY_READ)) {
+            Log.e(TAG, "failed to check properties");
+            return false;
+        }
+
         return gatt.readCharacteristic(characteristic);
     }
 
-    private void fireRead() {
-        // FIXME: wrong! this may cause concurrent problem
-        if (mWaitReadQueue.size() > 0) {
-            Log.d(TAG, "still waiting read event");
-            return;
+    private static boolean innerWriteCharacteristic(
+        BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, byte[] data) {
+
+        if (!checkProperties(gatt, characteristic, BluetoothGattCharacteristic.PROPERTY_WRITE)) {
+            Log.e(TAG, "failed to check properties");
+            return false;
         }
 
-        ReadTask task = mReadQueue.poll();
-        if (task == null) {
-            Log.i(TAG, "empty read queue");
-            return;
+        if (!characteristic.setValue(data)) {
+            Log.e(TAG, "failed to store the data to write");
+            return false;
         }
 
-        if (!innerReadCharacteristic(mGatt, task.characteristic)) {
-            Log.e(TAG, "failed to read characteristic: " + BtLeService.uuidStr(task.characteristic.getUuid()));
-            task.listener.onResult(null);
-            fireRead();
-        } else {
-            mWaitReadQueue.add(task);
-        }
+        return gatt.writeCharacteristic(characteristic);
     }
 
     public void readCharacteristic(BluetoothGattCharacteristic characteristic, Listener<byte[]> listener) {
         Log.d(TAG, "readCharacteristic: " + BtLeService.uuidStr(characteristic.getUuid()));
-        mReadQueue.offer(new ReadTask(characteristic, listener));
-        fireRead();
+        mTaskQueue.offer(new ReadTask(mGatt, characteristic, listener));
+        processTask();
     }
 
     // 128bit
@@ -247,22 +379,36 @@ public class BtLeDevice extends BluetoothGattCallback {
     // FIXME: Are all these callback called in the same thread? if not, there will be some problem of this
     @Override
     public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-        Log.d(TAG, "onCharacteristicRead: " + BtLeService.uuidStr(characteristic.getUuid()));
+        Log.d(TAG, "onCharacteristicRead: " + BtLeService.uuidStr(characteristic.getUuid()) + " status=" + status);
 
-        ReadTask task = mWaitReadQueue.poll();
-        if (!task.characteristic.equals(characteristic)) {
-            throw new IllegalStateException(
-                    "expect=" + BtLeService.uuidStr(characteristic.getUuid())
-                            + ", actual=" + BtLeService.uuidStr(task.characteristic.getUuid()));
+        synchronized (mTaskLock) {
+            if (mCurrentTask == null) {
+                throw new IllegalStateException("no waiting task");
+            }
+            mCurrentTask.onReadResult(characteristic, status);
+            mCurrentTask = null;
+            processTask();
         }
-        task.listener.onResult(characteristic.getValue());
+    }
 
-        fireRead();
+    public void writeCharacteristic(BluetoothGattCharacteristic characteristic, byte[] data, Listener<Boolean> listener) {
+        Log.d(TAG, "writeCharacteristic: " + BtLeService.uuidStr(characteristic.getUuid()));
+        mTaskQueue.offer(new WriteTask(mGatt, characteristic, data, listener));
+        processTask();
     }
 
     @Override
     public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-        Log.d(TAG, "onCharacteristicWrite: " + status);
+        Log.d(TAG, "onCharacteristicWrite: " + BtLeService.uuidStr(characteristic.getUuid()) + " status=" + status);
+
+        synchronized (mTaskLock) {
+            if (mCurrentTask == null) {
+                throw new IllegalStateException("no waiting task");
+            }
+            mCurrentTask.onWriteResult(characteristic, status);
+            mCurrentTask = null;
+            processTask();
+        }
     }
 
     @Override

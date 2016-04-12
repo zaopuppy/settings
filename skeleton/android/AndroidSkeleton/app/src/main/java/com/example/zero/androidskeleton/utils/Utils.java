@@ -31,7 +31,7 @@ public class Utils {
     }
 
     public static boolean isFlagSet(int prop, int flag) {
-        return (prop & flag) > 0;
+        return (prop & flag) == flag;
     }
 
 }
