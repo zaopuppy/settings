@@ -1,11 +1,6 @@
 package com.example.zero.androidskeleton.bt;
 
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCallback;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattService;
-import android.bluetooth.BluetoothProfile;
+import android.bluetooth.*;
 import android.content.Context;
 import android.util.Log;
 
@@ -49,9 +44,18 @@ public class BtLeDevice extends BluetoothGattCallback {
 
 
     private interface Task {
+
         boolean exec();
-        void onReadResult(BluetoothGattCharacteristic characteristic, int status);
-        void onWriteResult(BluetoothGattCharacteristic characteristic, int status);
+
+        void onReadResult(
+            BluetoothGattCharacteristic characteristic,
+            BluetoothGattDescriptor descriptor,
+            int status);
+
+        void onWriteResult(
+            BluetoothGattCharacteristic characteristic,
+            BluetoothGattDescriptor descriptor,
+            int status);
     }
 
     private static class ReadTask implements Task {
@@ -78,7 +82,10 @@ public class BtLeDevice extends BluetoothGattCallback {
         }
 
         @Override
-        public void onReadResult(BluetoothGattCharacteristic characteristic, int status) {
+        public void onReadResult(
+            BluetoothGattCharacteristic characteristic,
+            BluetoothGattDescriptor descriptor, int status) {
+
             if (!this.characteristic.equals(characteristic)) {
                 throw new IllegalStateException(
                     "expect=" + BtLeService.uuidStr(this.characteristic.getUuid())
@@ -93,7 +100,10 @@ public class BtLeDevice extends BluetoothGattCallback {
         }
 
         @Override
-        public void onWriteResult(BluetoothGattCharacteristic characteristic, int status) {
+        public void onWriteResult(
+            BluetoothGattCharacteristic characteristic,
+            BluetoothGattDescriptor descriptor, int status) {
+
             throw new IllegalStateException("unexpected write result");
         }
     }
@@ -122,16 +132,76 @@ public class BtLeDevice extends BluetoothGattCallback {
         }
 
         @Override
-        public void onReadResult(BluetoothGattCharacteristic characteristic, int status) {
+        public void onReadResult(
+            BluetoothGattCharacteristic characteristic,
+            BluetoothGattDescriptor descriptor, int status) {
+
             throw new IllegalStateException("unexpected read result");
         }
 
         @Override
-        public void onWriteResult(BluetoothGattCharacteristic characteristic, int status) {
+        public void onWriteResult(
+            BluetoothGattCharacteristic characteristic,
+            BluetoothGattDescriptor descriptor, int status) {
+
             if (!this.characteristic.equals(characteristic)) {
                 throw new IllegalStateException(
                     "expect=" + BtLeService.uuidStr(this.characteristic.getUuid())
                         + ", actual=" + BtLeService.uuidStr(characteristic.getUuid()));
+            }
+
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                listener.onResult(false);
+                return;
+            }
+
+            listener.onResult(true);
+        }
+    }
+
+    private static class WriteDescriptorTask implements Task {
+
+        private final BluetoothGatt gatt;
+        private final BluetoothGattCharacteristic characteristic;
+        private final BluetoothGattDescriptor descriptor;
+        private final byte[] data;
+        private final Listener<Boolean> listener;
+
+        public WriteDescriptorTask(
+            BluetoothGatt gatt,
+            BluetoothGattCharacteristic characteristic,
+            BluetoothGattDescriptor descriptor, byte[] data,
+            Listener<Boolean> listener) {
+            this.gatt = gatt;
+            this.characteristic = characteristic;
+            this.descriptor = descriptor;
+            this.data = data;
+            this.listener = listener;
+        }
+
+        @Override
+        public boolean exec() {
+            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+            return gatt.writeDescriptor(descriptor);
+        }
+
+        @Override
+        public void onReadResult(
+            BluetoothGattCharacteristic characteristic,
+            BluetoothGattDescriptor descriptor, int status) {
+
+            throw new IllegalStateException("unexpected descriptor read result");
+        }
+
+        @Override
+        public void onWriteResult(
+            BluetoothGattCharacteristic characteristic,
+            BluetoothGattDescriptor descriptor, int status) {
+
+            if (!this.descriptor.equals(descriptor)) {
+                throw new IllegalStateException(
+                    "expect=" + BtLeService.uuidStr(this.descriptor.getUuid())
+                        + ", actual=" + BtLeService.uuidStr(descriptor.getUuid()));
             }
 
             if (status != BluetoothGatt.GATT_SUCCESS) {
@@ -300,14 +370,21 @@ public class BtLeDevice extends BluetoothGattCallback {
         setState(State.READY);
     }
 
-    public boolean makeNotify(BluetoothGattCharacteristic characteristic) {
+    public boolean makeNotify(BluetoothGattCharacteristic characteristic, Listener<Boolean> listener) {
         //int prop = characteristic.getProperties();
         //if (Utils.isFlagSet(prop, BluetoothGattCharacteristic.PROPERTY_NOTIFY)) {
         //    Log.d(TAG, BtLeService.uuidStr(characteristic.getUuid()) + " already notify");
         //    return true;
         //}
 
-        return mGatt.setCharacteristicNotification(characteristic, true);
+        mGatt.setCharacteristicNotification(characteristic, true);
+        List<BluetoothGattDescriptor> descriptor_list = characteristic.getDescriptors();
+        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(descriptor_list.get(0).getUuid());
+        mTaskQueue.offer(new WriteDescriptorTask(
+            mGatt, characteristic, descriptor,
+            BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE, listener));
+        processTask();
+        return true;
     }
 
     private static boolean checkProperties(
@@ -326,13 +403,13 @@ public class BtLeDevice extends BluetoothGattCallback {
             return false;
         }
 
-        if (!Utils.isFlagSet(prop, BluetoothGattCharacteristic.PROPERTY_NOTIFY)) {
-            Log.d(TAG, "no notify property, modify");
-            if (!gatt.setCharacteristicNotification(characteristic, true)) {
-                Log.e(TAG, "failed to set notify");
-                return false;
-            }
-        }
+        //if (!Utils.isFlagSet(prop, BluetoothGattCharacteristic.PROPERTY_NOTIFY)) {
+        //    Log.d(TAG, "no notify property, modify");
+        //    if (!gatt.setCharacteristicNotification(characteristic, true)) {
+        //        Log.e(TAG, "failed to set notify");
+        //        return false;
+        //    }
+        //}
 
         return true;
     }
@@ -383,9 +460,9 @@ public class BtLeDevice extends BluetoothGattCallback {
 
         synchronized (mTaskLock) {
             if (mCurrentTask == null) {
-                throw new IllegalStateException("no waiting task");
+                throw new IllegalStateException("no waiting task for characteristic reading");
             }
-            mCurrentTask.onReadResult(characteristic, status);
+            mCurrentTask.onReadResult(characteristic, null, status);
             mCurrentTask = null;
             processTask();
         }
@@ -403,9 +480,9 @@ public class BtLeDevice extends BluetoothGattCallback {
 
         synchronized (mTaskLock) {
             if (mCurrentTask == null) {
-                throw new IllegalStateException("no waiting task");
+                throw new IllegalStateException("no waiting task for characteristic writing");
             }
-            mCurrentTask.onWriteResult(characteristic, status);
+            mCurrentTask.onWriteResult(characteristic, null, status);
             mCurrentTask = null;
             processTask();
         }
@@ -414,5 +491,24 @@ public class BtLeDevice extends BluetoothGattCallback {
     @Override
     public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         Log.d(TAG, "onCharacteristicChanged");
+        Log.e(TAG, BtLeService.uuidStr(characteristic.getUuid()) + " new value: " + Utils.b16encode(characteristic.getValue()));
+    }
+
+    @Override
+    public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+        Log.d(TAG, "onDescriptorRead");
+    }
+
+    @Override
+    public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+        Log.d(TAG, "onDescriptorWrite");
+        synchronized (mTaskLock) {
+            if (mCurrentTask == null) {
+                throw new IllegalStateException("no waiting task for descriptor writing");
+            }
+            mCurrentTask.onWriteResult(null, descriptor, status);
+            mCurrentTask = null;
+            processTask();
+        }
     }
 }

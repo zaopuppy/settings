@@ -1,5 +1,6 @@
 package com.example.zero.androidskeleton.ui;
 
+import android.app.ActionBar;
 import android.bluetooth.*;
 import android.content.Intent;
 import android.os.Bundle;
@@ -17,6 +18,12 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.UUID;
 
+/**
+ * 0. check if system support bluetooth-le
+ * 1. auto permission
+ * 2. better action bar
+ * 3. auto in range unlock
+ */
 public class ShowDeviceActivity extends AppCompatActivity {
     private static final String TAG = "ShowDeviceActivity";
 
@@ -29,6 +36,7 @@ public class ShowDeviceActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_show_device);
 
         Intent intent = getIntent();
@@ -40,6 +48,12 @@ public class ShowDeviceActivity extends AppCompatActivity {
         }
 
         mDevice = new BtLeDevice(device);
+
+        ActionBar actionBar = getActionBar();
+        if (actionBar != null) {
+            actionBar.setTitle(mDevice.getName());
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
 
         setUiComp();
     }
@@ -101,7 +115,12 @@ public class ShowDeviceActivity extends AppCompatActivity {
                     }
                 }
 
-                mDevice.makeNotify(characteristic4);
+                mDevice.makeNotify(characteristic4, new BtLeDevice.Listener<Boolean>() {
+                    @Override
+                    public void onResult(Boolean result) {
+                        Log.e(TAG, "make notify: " + result);
+                    }
+                });
 
                 ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE/8);
                 buffer.putLong(0x0A0000000000000BL);

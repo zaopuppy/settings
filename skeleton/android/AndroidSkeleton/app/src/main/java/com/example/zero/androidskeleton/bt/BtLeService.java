@@ -3,13 +3,16 @@ package com.example.zero.androidskeleton.bt;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
+import android.util.Log;
 
 import java.util.UUID;
+
 
 /**
  * Created by zero on 2016/4/7.
  */
 public class BtLeService {
+    private static final String TAG = "BtLeService";
 
     // see https://www.bluetooth.com/specifications/assigned-numbers/generic-attribute-profile
     /**
@@ -49,12 +52,12 @@ public class BtLeService {
 
     public static final BtLeService INSTANCE = new BtLeService();
 
-    private final BluetoothAdapter mBtAdapter;
+    //private final BluetoothAdapter mBtAdapter;
     private final BluetoothLeScanner mBtLeScanner;
 
     private BtLeService() {
-        mBtAdapter = BluetoothAdapter.getDefaultAdapter();
-        mBtLeScanner = mBtAdapter.getBluetoothLeScanner();
+        //mBtAdapter = BluetoothAdapter.getDefaultAdapter();
+        mBtLeScanner = BluetoothAdapter.getDefaultAdapter().getBluetoothLeScanner();
     }
 
     public static int extractBtUuid(UUID uuid) {
@@ -76,6 +79,7 @@ public class BtLeService {
     }
 
     public void startScan(ScanCallback callback) {
+        Log.e(TAG, "startScan");
         mBtLeScanner.startScan(callback);
     }
 
