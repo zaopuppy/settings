@@ -1,11 +1,15 @@
 package com.example.zero.androidskeleton.ui;
 
+import android.Manifest;
 import android.app.ActionBar;
 import android.bluetooth.*;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -64,9 +68,31 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
     private final MyScanCallback mScanCallback = new MyScanCallback();
 
+    private void checkAllMyPermission() {
+        final String[] permission_list = {
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        };
+        for (String permission: permission_list) {
+            checkMyPermission(permission);
+        }
+    }
+
+    private void checkMyPermission(String permission) {
+        int result = ContextCompat.checkSelfPermission(getApplicationContext(), permission);
+        if (result == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        ActivityCompat.requestPermissions(this, new String[] { permission }, 0);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        checkAllMyPermission();
 
         mListViewAdapter = new SimpleArrayAdapter(this, R.layout.select_list_item_device);
 

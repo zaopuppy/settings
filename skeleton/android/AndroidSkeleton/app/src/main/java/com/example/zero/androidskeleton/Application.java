@@ -1,5 +1,9 @@
 package com.example.zero.androidskeleton;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import com.example.zero.androidskeleton.bt.BtService;
 
 /**
@@ -12,4 +16,5 @@ public class Application extends android.app.Application {
 
         BtService.INSTANCE.init(getApplicationContext());
     }
+
 }
