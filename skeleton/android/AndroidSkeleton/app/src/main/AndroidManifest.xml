@@ -21,10 +21,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".MainActivity" />
-        <activity
-            android:name=".ui.ShowDeviceActivity"
-            android:label="@string/title_activity_show_device"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+        <activity android:name=".ui.ShowDeviceActivity"/>
     </application>
 
 </manifest>

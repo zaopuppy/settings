@@ -9,26 +9,17 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.example.zero.androidskeleton.ui.ShowDeviceActivity">
 
-    <TextView
-        android:id="@+id/name"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="25sp"
-        android:text="[Name]"/>
-
-    <TextView
-        android:id="@+id/address"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/name"
-        android:text="[UUID]"/>
-
     <Button
         android:id="@+id/open_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/address"
         android:text="[Open]"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@+id/open_button"
+        android:text="xx"/>
 
     <ScrollView
         android:layout_width="match_parent"

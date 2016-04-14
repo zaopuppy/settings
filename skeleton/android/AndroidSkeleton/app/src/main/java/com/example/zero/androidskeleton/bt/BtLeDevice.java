@@ -293,6 +293,10 @@ public class BtLeDevice extends BluetoothGattCallback {
         mGatt = mDevice.connectGatt(context, false, this);
     }
 
+    public void disconnectGatt() {
+        mGatt.disconnect();
+    }
+
     //public boolean writeCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value) {
     //    characteristic.setValue(value);
     //    return mGatt.writeCharacteristic(characteristic);

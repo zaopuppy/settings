@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -27,11 +29,17 @@ import java.util.UUID;
 public class ShowDeviceActivity extends AppCompatActivity {
     private static final String TAG = "ShowDeviceActivity";
 
+    private TextView mDetailText;
+
     private void log(String msg) {
         Log.i(TAG, msg + '\n');
     }
 
     private BtLeDevice mDevice = null;
+
+    private void showMsg(String msg) {
+        mDetailText.append(msg + '\n');
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,23 +64,70 @@ public class ShowDeviceActivity extends AppCompatActivity {
         }
 
         setUiComp();
+
+        // setup event handler
+        final Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.w(TAG, "invalidate option menu");
+                invalidateOptionsMenu();
+            }
+        };
+
+        mDevice.onReady(new Runnable() {
+            @Override
+            public void run() {
+                runOnUiThread(runnable);
+            }
+        });
+        mDevice.onDisconnected(new Runnable() {
+            @Override
+            public void run() {
+                runOnUiThread(runnable);
+            }
+        });
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.show_device_menu, menu);
+
+        if (mDevice.getState() == BtLeDevice.State.READY) {
+            menu.findItem(R.id.menu_connect).setVisible(false);
+            menu.findItem(R.id.menu_disconnect).setVisible(true);
+            menu.findItem(R.id.menu_refresh).setActionView(null);
+        } else {
+            menu.findItem(R.id.menu_connect).setVisible(true);
+            menu.findItem(R.id.menu_disconnect).setVisible(false);
+            menu.findItem(R.id.menu_refresh).setActionView(null);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_connect:
+                mDevice.connectGatt(getApplicationContext());
+                invalidateOptionsMenu();
+                break;
+            case R.id.menu_disconnect:
+                mDevice.disconnectGatt();
+                invalidateOptionsMenu();
+                break;
+            default:
+                break;
+        }
+        return true;
     }
 
     private void setUiComp() {
-        final TextView devDetailView = (TextView) findViewById(R.id.device_detail);
-        assert devDetailView != null;
-
-        TextView nameView = (TextView) findViewById(R.id.name);
-        assert nameView != null;
-        nameView.setText(mDevice.getName());
-
-        TextView addressView = (TextView) findViewById(R.id.address);
-        assert addressView != null;
-        addressView.setText(mDevice.getAddress());
+        mDetailText = (TextView) findViewById(R.id.device_detail);
+        assert mDetailText != null;
 
         final Button openButton = (Button) findViewById(R.id.open_button);
         assert openButton != null;
-        openButton.setEnabled(false);
+        // openButton.setEnabled(false);
         openButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -124,47 +179,16 @@ public class ShowDeviceActivity extends AppCompatActivity {
 
                 ByteBuffer buffer = ByteBuffer.allocate(Long.SIZE/8);
                 buffer.putLong(0x0A0000000000000BL);
-                final BluetoothGattCharacteristic tempChara = characteristic4;
                 mDevice.writeCharacteristic(characteristic1, buffer.array(), new BtLeDevice.Listener<Boolean>() {
                     @Override
                     public void onResult(Boolean result) {
                         Log.e(TAG, "write result: " + result);
-                        //mDevice.readCharacteristic(tempChara, new BtLeDevice.Listener<byte[]>() {
-                        //    @Override
-                        //    public void onResult(byte[] result) {
-                        //        Log.e(TAG, "read result: " + Utils.b16encode(result));
-                        //    }
-                        //});
                     }
                 });
             }
         });
 
-        // setup event handler
-        mDevice.onReady(new Runnable() {
-            @Override
-            public void run() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        openButton.setEnabled(true);
-                    }
-                });
-            }
-        });
-        mDevice.onDisconnected(new Runnable() {
-            @Override
-            public void run() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        openButton.setEnabled(false);
-                    }
-                });
-            }
-        });
-
-        mDevice.connectGatt(getApplicationContext());
+        // mDevice.connectGatt(getApplicationContext());
     }
 
 }
