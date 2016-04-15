@@ -52,11 +52,11 @@ public class BtLeService {
 
     public static final BtLeService INSTANCE = new BtLeService();
 
-    //private final BluetoothAdapter mBtAdapter;
+    private final BluetoothAdapter mBtAdapter;
     private final BluetoothLeScanner mBtLeScanner;
 
     private BtLeService() {
-        //mBtAdapter = BluetoothAdapter.getDefaultAdapter();
+        mBtAdapter = BluetoothAdapter.getDefaultAdapter();
         mBtLeScanner = BluetoothAdapter.getDefaultAdapter().getBluetoothLeScanner();
     }
 
@@ -87,4 +87,11 @@ public class BtLeService {
         mBtLeScanner.stopScan(callback);
     }
 
+    public void startScanOld(BluetoothAdapter.LeScanCallback callback) {
+        mBtAdapter.startLeScan(callback);
+    }
+
+    public void stopScanOld(BluetoothAdapter.LeScanCallback callback) {
+        mBtAdapter.stopLeScan(callback);
+    }
 }

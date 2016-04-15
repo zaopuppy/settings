@@ -21,4 +21,12 @@ public class SpManager {
     public void putInt(String key, int value) {
         mPerferences.edit().putInt(key, value).apply();
     }
+
+    public String getString(String key, String defValue) {
+        return mPerferences.getString(key, defValue);
+    }
+
+    public void putString(String key, String value) {
+        mPerferences.edit().putString(key, value).apply();
+    }
 }

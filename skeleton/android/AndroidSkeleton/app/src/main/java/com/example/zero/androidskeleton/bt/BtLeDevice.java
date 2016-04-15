@@ -3,12 +3,12 @@ package com.example.zero.androidskeleton.bt;
 import android.bluetooth.*;
 import android.content.Context;
 import android.util.Log;
-
 import com.example.zero.androidskeleton.utils.Utils;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by zero on 2016/4/8.
@@ -34,6 +34,10 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     public void onDisconnected(Runnable runnable) {
         mDisconnectedEventHandler = runnable;
+    }
+
+    public void onCharacteristicChanged(CharacteristicChangedListener listener) {
+        mCharacteristicChangedListener = listener;
     }
 
     private final BluetoothDevice mDevice;
@@ -235,26 +239,9 @@ public class BtLeDevice extends BluetoothGattCallback {
         }
     }
 
-    ///**
-    // * read queue for one operation every time
-    // *
-    // * TODO: do we need a lock?
-    // */
-    //private final Queue<ReadTask> mReadQueue = new ConcurrentLinkedQueue<>();
-    //
-    //// FIXME: no need to use queue
-    //private final Queue<ReadTask> mWaitReadQueue = new ConcurrentLinkedQueue<>();
-    //
-    ///**
-    // * same reason as read queue
-    // */
-    //private final List<WriteTask> onWriteQueue = new ArrayList<>(8);
-
-    /**
-     * current saved read listener
-     * @param <T>
-     */
-    //private Listener<byte[]> mReadListener;
+    public interface CharacteristicChangedListener {
+        void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic);
+    }
 
     // TODO: currently only support one device
     private Runnable mReadyEventHandler = new Runnable() {
@@ -268,6 +255,13 @@ public class BtLeDevice extends BluetoothGattCallback {
         @Override
         public void run() {
             Log.d(TAG, "no disconnected event handler was set");
+        }
+    };
+
+    private CharacteristicChangedListener mCharacteristicChangedListener = new CharacteristicChangedListener() {
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+            Log.d(TAG, "onCharacteristicChanged default listener");
         }
     };
 
@@ -294,7 +288,10 @@ public class BtLeDevice extends BluetoothGattCallback {
     }
 
     public void disconnectGatt() {
-        mGatt.disconnect();
+        if (mGatt != null) {
+            mGatt.disconnect();
+            mGatt = null;
+        }
     }
 
     //public boolean writeCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value) {
@@ -380,6 +377,9 @@ public class BtLeDevice extends BluetoothGattCallback {
         //    Log.d(TAG, BtLeService.uuidStr(characteristic.getUuid()) + " already notify");
         //    return true;
         //}
+        if (mGatt == null) {
+            return false;
+        }
 
         mGatt.setCharacteristicNotification(characteristic, true);
         List<BluetoothGattDescriptor> descriptor_list = characteristic.getDescriptors();
@@ -494,8 +494,12 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     @Override
     public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        Log.d(TAG, "onCharacteristicChanged");
-        Log.e(TAG, BtLeService.uuidStr(characteristic.getUuid()) + " new value: " + Utils.b16encode(characteristic.getValue()));
+        Log.d(TAG, "onCharacteristicChanged, uuid=" + BtLeService.uuidStr(characteristic.getUuid()) + ", value-length=" + characteristic.getValue().length);
+        ByteBuffer buffer = ByteBuffer.allocate(2);
+        buffer.put(characteristic.getValue());
+        buffer.flip();
+        Log.e(TAG, BtLeService.uuidStr(characteristic.getUuid()) + " new value: " + (int)buffer.get());
+        mCharacteristicChangedListener.onCharacteristicChanged(gatt, characteristic);
     }
 
     @Override

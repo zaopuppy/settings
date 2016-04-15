@@ -1,8 +1,7 @@
 package com.example.zero.androidskeleton.ui;
 
 import android.Manifest;
-import android.app.ActionBar;
-import android.bluetooth.*;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.content.Intent;
@@ -10,13 +9,13 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.ListView;
 import com.example.zero.androidskeleton.R;
 import com.example.zero.androidskeleton.bt.BtLeService;
@@ -29,12 +28,6 @@ public class SelectDeviceActivity extends AppCompatActivity {
     private SimpleArrayAdapter mListViewAdapter;
 
     private void log(final String msg) {
-        //runOnUiThread(new Runnable() {
-        //    @Override
-        //    public void run() {
-        //        mLogView.append(msg + '\n');
-        //    }
-        //});
         Log.i(TAG, msg + '\n');
     }
 
@@ -44,7 +37,6 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
-            Log.e(TAG, "type=" + callbackType);
             BluetoothDevice device = result.getDevice();
             mListViewAdapter.add(device);
         }
@@ -98,7 +90,7 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_select_device);
 
-        ActionBar actionBar = getActionBar();
+        ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setTitle("Select Device");
             actionBar.setDisplayHomeAsUpEnabled(true);
@@ -120,6 +112,7 @@ public class SelectDeviceActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         mListViewAdapter.clear();
+        // BtLeService.INSTANCE.startScan(mScanCallback);
         BtLeService.INSTANCE.startScan(mScanCallback);
         mScanning = true;
         invalidateOptionsMenu();
@@ -145,8 +138,12 @@ public class SelectDeviceActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            case android.R.id.home:
+                onBackPressed();
+                break;
             case R.id.menu_scan:
                 mListViewAdapter.clear();
+                // BtLeService.INSTANCE.startScan(mScanCallback);
                 BtLeService.INSTANCE.startScan(mScanCallback);
                 mScanning = true;
                 invalidateOptionsMenu();
