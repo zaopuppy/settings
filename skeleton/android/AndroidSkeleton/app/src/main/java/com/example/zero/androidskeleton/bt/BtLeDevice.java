@@ -29,11 +29,19 @@ public class BtLeDevice extends BluetoothGattCallback {
     }
 
     public void onReady(Runnable runnable) {
-        mReadyEventHandler = runnable;
+        if (runnable == null) {
+            mReadyEventHandler = EMPTY_HANDLER;
+        } else {
+            mReadyEventHandler = runnable;
+        }
     }
 
     public void onDisconnected(Runnable runnable) {
-        mDisconnectedEventHandler = runnable;
+        if (runnable == null) {
+            mDisconnectedEventHandler = EMPTY_HANDLER;
+        } else {
+            mDisconnectedEventHandler = runnable;
+        }
     }
 
     public void onCharacteristicChanged(CharacteristicChangedListener listener) {
@@ -44,13 +52,12 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     private State mState = State.DISCONNECTED;
     private BluetoothGatt mGatt = null;
-    //private BluetoothGattCharacteristic mCharacteristic;
-
 
     private interface Task {
 
         boolean exec();
 
+        // void onResult(characteristic, descriptor, status);
         void onReadResult(
             BluetoothGattCharacteristic characteristic,
             BluetoothGattDescriptor descriptor,
@@ -244,19 +251,14 @@ public class BtLeDevice extends BluetoothGattCallback {
     }
 
     // TODO: currently only support one device
-    private Runnable mReadyEventHandler = new Runnable() {
+    private static final Runnable EMPTY_HANDLER = new Runnable() {
         @Override
         public void run() {
-            Log.d(TAG, "no ready event handler was set");
+            // do nothing
         }
     };
-
-    private Runnable mDisconnectedEventHandler = new Runnable() {
-        @Override
-        public void run() {
-            Log.d(TAG, "no disconnected event handler was set");
-        }
-    };
+    private Runnable mReadyEventHandler = EMPTY_HANDLER;
+    private Runnable mDisconnectedEventHandler = EMPTY_HANDLER;
 
     private CharacteristicChangedListener mCharacteristicChangedListener = new CharacteristicChangedListener() {
         @Override
@@ -271,8 +273,6 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     public BtLeDevice(BluetoothDevice device) {
         mDevice = device;
-        //mExecutor = new ThreadPoolExecutor(
-        //    1, 1, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<Runnable>(2));
     }
 
     public String getName() {
@@ -284,6 +284,12 @@ public class BtLeDevice extends BluetoothGattCallback {
     }
 
     public void connectGatt(Context context) {
+        if (getState() == State.READY) {
+            if (mReadyEventHandler != null) {
+                mReadyEventHandler.run();
+            }
+            return;
+        }
         mGatt = mDevice.connectGatt(context, false, this);
     }
 
@@ -348,6 +354,19 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     public List<BluetoothGattService> getServiceList() {
         return mGatt.getServices();
+    }
+
+    public BluetoothGattCharacteristic getCharacteristic(int uuid16) {
+        for (BluetoothGattService service: mGatt.getServices()) {
+            for (BluetoothGattCharacteristic characteristic: service.getCharacteristics()) {
+                int tmpUuid16 = BtLeService.extractBtUuid(characteristic.getUuid());
+                if (uuid16 == tmpUuid16) {
+                    return characteristic;
+                }
+            }
+        }
+
+        return null;
     }
 
     @Override

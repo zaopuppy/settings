@@ -52,10 +52,14 @@ public class BtLeService {
 
     public static final BtLeService INSTANCE = new BtLeService();
 
-    private final BluetoothAdapter mBtAdapter;
-    private final BluetoothLeScanner mBtLeScanner;
+    private BluetoothAdapter mBtAdapter;
+    private BluetoothLeScanner mBtLeScanner;
 
     private BtLeService() {
+        init();
+    }
+
+    public void init() {
         mBtAdapter = BluetoothAdapter.getDefaultAdapter();
         mBtLeScanner = BluetoothAdapter.getDefaultAdapter().getBluetoothLeScanner();
     }
@@ -76,6 +80,14 @@ public class BtLeService {
 
     public static boolean isReservedUuid(int uuid) {
         return uuid < 0xFFE0;
+    }
+
+    public BluetoothAdapter getAdapter() {
+        return mBtAdapter;
+    }
+
+    public BluetoothLeScanner getScanner() {
+        return mBtLeScanner;
     }
 
     public void startScan(ScanCallback callback) {

@@ -2,6 +2,8 @@ package com.example.zero.androidskeleton.ui;
 
 import android.Manifest;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.content.Intent;
@@ -16,13 +18,22 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.CompoundButton;
 import android.widget.ListView;
+import android.widget.ToggleButton;
 import com.example.zero.androidskeleton.R;
+import com.example.zero.androidskeleton.bt.BtLeDevice;
 import com.example.zero.androidskeleton.bt.BtLeService;
+import com.example.zero.androidskeleton.bt.DoorProtocol;
+import com.example.zero.androidskeleton.storage.BtDeviceStorage;
+import com.example.zero.androidskeleton.utils.Utils;
 
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class SelectDeviceActivity extends AppCompatActivity {
+
     private static final String TAG = "SelectDeviceActivity";
 
     private SimpleArrayAdapter mListViewAdapter;
@@ -38,7 +49,67 @@ public class SelectDeviceActivity extends AppCompatActivity {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             BluetoothDevice device = result.getDevice();
+            int oldSize = mListViewAdapter.getCount();
             mListViewAdapter.add(device);
+            if (mAutoButton.isChecked() && mListViewAdapter.getCount() > oldSize) {
+                int password = BtDeviceStorage.INSTANCE.get(device.getAddress());
+                if (password >= 0) {
+                    open(device, password);
+                }
+            }
+        }
+
+        private void open(final BluetoothDevice dev, final int password) {
+            final BtLeDevice device = new BtLeDevice(dev);
+            device.onReady(new Runnable() {
+                @Override
+                public void run() {
+                    device.onReady(null);
+                    device.onCharacteristicChanged(new BtLeDevice.CharacteristicChangedListener() {
+                        @Override
+                        public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic chara) {
+                            byte[] value = chara.getValue();
+                            if (value == null || value.length <= 0) {
+                                // ignore
+                                return;
+                            }
+
+                            final byte result = chara.getValue()[0];
+                            Log.d(TAG, "onCharacteristicChanged: " + result);
+                            switch (result) {
+                                case DoorProtocol.RESULT_PASSWORD_CORRECT: {
+                                    Log.d(TAG, "save password: " + password);
+                                    BtDeviceStorage.INSTANCE.put(device.getAddress(), password);
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Utils.makeToast(getApplicationContext(), device.getName() + ": 开门密码正确");
+                                        }
+                                    });
+                                    break;
+                                }
+                                case DoorProtocol.RESULT_PASSWORD_WRONG: {
+                                    Log.d(TAG, "bad password clear");
+                                    BtDeviceStorage.INSTANCE.put(device.getAddress(), -1);
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Utils.makeToast(getApplicationContext(), device.getName() + ": 开门密码错误");
+                                        }
+                                    });
+                                    break;
+                                }
+                                default:
+                                    // ignore
+                                    break;
+                            }
+                            device.disconnectGatt();
+                        }
+                    });
+                    DoorProtocol.openDoor(device, password);
+                }
+            });
+            device.connectGatt(getApplicationContext());
         }
 
         @Override
@@ -98,24 +169,57 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
         setupUiComp();
 
+
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            Utils.makeToast(this, "该手机不支持低功耗蓝牙");
+            finish();
+        }
+
+        BtLeService.INSTANCE.init();
+        if (BtLeService.INSTANCE.getAdapter() == null || BtLeService.INSTANCE.getScanner() == null) {
+            Utils.makeToast(this, "蓝牙功能不支持或者开关未打开");
+            finish();
+        }
+    }
+
+    private void startScan() {
+        mListViewAdapter.clear();
+        BtLeService.INSTANCE.startScan(mScanCallback);
+        mScanning = true;
+        invalidateOptionsMenu();
+    }
+
+    private void stopScan() {
+        BtLeService.INSTANCE.stopScan(mScanCallback);
+        mScanning = false;
+        invalidateOptionsMenu();
+    }
+
+    private final Timer mTimer = new Timer("le-scan-timer");
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mScanning) {
+                            stopScan();
+                            startScan();
+                        }
+                    }
+                });
+            }
+        }, 0, 20*1000);
     }
 
     @Override
     protected void onPause() {
-        BtLeService.INSTANCE.stopScan(mScanCallback);
-        mScanning = false;
-
+        mTimer.cancel();
+        stopScan();
         super.onPause();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mListViewAdapter.clear();
-        // BtLeService.INSTANCE.startScan(mScanCallback);
-        BtLeService.INSTANCE.startScan(mScanCallback);
-        mScanning = true;
-        invalidateOptionsMenu();
     }
 
     @Override
@@ -142,16 +246,10 @@ public class SelectDeviceActivity extends AppCompatActivity {
                 onBackPressed();
                 break;
             case R.id.menu_scan:
-                mListViewAdapter.clear();
-                // BtLeService.INSTANCE.startScan(mScanCallback);
-                BtLeService.INSTANCE.startScan(mScanCallback);
-                mScanning = true;
-                invalidateOptionsMenu();
+                startScan();
                 break;
             case R.id.menu_stop:
-                BtLeService.INSTANCE.stopScan(mScanCallback);
-                mScanning = false;
-                invalidateOptionsMenu();
+                stopScan();
                 break;
             default:
                 break;
@@ -159,27 +257,19 @@ public class SelectDeviceActivity extends AppCompatActivity {
         return true;
     }
 
+    private ToggleButton mAutoButton;
     private void setupUiComp() {
-        //final Button scan_button = (Button) findViewById(R.id.scan_button);
-        //assert scan_button != null;
-        //scan_button.setOnClickListener(new View.OnClickListener() {
-        //    @Override
-        //    public void onClick(View v) {
-        //        scan_button.setEnabled(false);
-        //        // mListViewAdapter.clear();
-        //        BtLeService.INSTANCE.startScan(mScanCallback);
-        //    }
-        //});
-        //
-        //final Button clean_button = (Button) findViewById(R.id.clean_button);
-        //assert clean_button != null;
-        //clean_button.setOnClickListener(new View.OnClickListener() {
-        //    @Override
-        //    public void onClick(View v) {
-        //        scan_button.setEnabled(true);
-        //        BtLeService.INSTANCE.stopScan(mScanCallback);
-        //    }
-        //});
+        mAutoButton = (ToggleButton) findViewById(R.id.auto_button);
+        assert mAutoButton != null;
+        mAutoButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    stopScan();
+                    startScan();
+                }
+            }
+        });
 
         ListView device_list_view = (ListView) findViewById(R.id.device_list_view);
         assert device_list_view != null;

@@ -239,29 +239,35 @@ public class ShowDeviceActivity extends AppCompatActivity {
                                 }
 
                                 final byte result = chara.getValue()[0];
+                                final String resultStr;
                                 switch (result) {
                                     case DoorProtocol.RESULT_PASSWORD_CORRECT: {
+                                        resultStr = "开门密码正确";
                                         Log.d(TAG, "save password: " + mPassword);
                                         BtDeviceStorage.INSTANCE.put(mDevice.getAddress(), mPassword);
                                         break;
                                     }
                                     case DoorProtocol.RESULT_PASSWORD_WRONG: {
+                                        resultStr = "开门密码错误";
                                         Log.d(TAG, "bad password clear: " + mPassword);
                                         BtDeviceStorage.INSTANCE.put(mDevice.getAddress(), -1);
                                         break;
                                     }
                                     case DoorProtocol.RESULT_PASSWORD_CHANGED: {
+                                        resultStr = "修改密码成功";
                                         Log.d(TAG, "password changed: " + mPassword);
                                         BtDeviceStorage.INSTANCE.put(mDevice.getAddress(), mPassword);
-                                    }
-                                    default:
-                                        // ignore
                                         break;
+                                    }
+                                    default: {
+                                        resultStr = "" + result;
+                                        break;
+                                    }
                                 }
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        showMsg("result: " + result);
+                                        showMsg("result: " + resultStr);
                                     }
                                 });
                             }
