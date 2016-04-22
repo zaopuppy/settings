@@ -195,10 +195,11 @@ public class SelectDeviceActivity extends AppCompatActivity {
         invalidateOptionsMenu();
     }
 
-    private final Timer mTimer = new Timer("le-scan-timer");
+    private Timer mTimer;
     @Override
     protected void onResume() {
         super.onResume();
+        mTimer = new Timer("le-scan-timer");
         mTimer.schedule(new TimerTask() {
             @Override
             public void run() {
