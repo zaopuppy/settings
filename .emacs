@@ -30,6 +30,10 @@
 (setq make-backup-files nil)
 
 
+;; http://zzamboni.org/blog/solving-hangs-in-emacs-on-windows/
+;; try to improve slow performance on windows.
+(setq w32-get-true-file-attributes nil)
+
 
 ;; END
 
