@@ -18,10 +18,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.CompoundButton;
-import android.widget.ListView;
-import android.widget.ToggleButton;
+import android.widget.*;
 import com.example.zero.androidskeleton.R;
 import com.example.zero.androidskeleton.bt.BtLeDevice;
 import com.example.zero.androidskeleton.bt.BtLeService;
@@ -37,6 +34,7 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
     private static final String TAG = "SelectDeviceActivity";
 
+    private EditText mCopyArea;
     private SimpleArrayAdapter mListViewAdapter;
 
     private void log(final String msg) {
@@ -52,25 +50,23 @@ public class SelectDeviceActivity extends AppCompatActivity {
             Log.e(TAG, "onScanResult");
 
             BluetoothDevice device = result.getDevice();
-
-            // output scan result
-            {
-                ScanRecord record = result.getScanRecord();
-                if (record != null) {
-                    byte[] data = record.getBytes();
-                    Log.e(TAG, Utils.b16encode(data));
-                } else {
-                    Log.e(TAG, "no scan record for " + device.getName());
-                }
-
-            }
-
             int oldSize = mListViewAdapter.getCount();
             mListViewAdapter.add(device);
             if (mAutoButton.isChecked() && mListViewAdapter.getCount() > oldSize) {
                 int password = BtDeviceStorage.INSTANCE.get(device.getAddress());
                 if (password >= 0) {
                     open(device, password);
+                }
+            }
+
+            if (mListViewAdapter.getCount() > oldSize) {
+                ScanRecord record = result.getScanRecord();
+                if (record != null) {
+                    byte[] data = record.getBytes();
+                    Log.e(TAG, Utils.b16encode(data));
+                    mCopyArea.setText(Utils.b16encode(data) + '\n');
+                } else {
+                    Log.e(TAG, "no scan record for " + device.getName());
                 }
             }
         }
@@ -276,6 +272,10 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
     private ToggleButton mAutoButton;
     private void setupUiComp() {
+
+        mCopyArea = (EditText) findViewById(R.id.copy_area);
+        assert mCopyArea != null;
+
         mAutoButton = (ToggleButton) findViewById(R.id.auto_button);
         assert mAutoButton != null;
         mAutoButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {

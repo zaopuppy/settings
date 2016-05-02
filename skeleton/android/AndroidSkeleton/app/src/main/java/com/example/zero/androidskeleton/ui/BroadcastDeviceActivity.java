@@ -1,5 +1,6 @@
 package com.example.zero.androidskeleton.ui;
 
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.*;
 import android.content.Intent;
@@ -11,6 +12,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import com.example.zero.androidskeleton.R;
 import com.example.zero.androidskeleton.bt.DoorProtocol;
+import com.example.zero.androidskeleton.utils.Utils;
 
 import java.util.UUID;
 import java.util.zip.CRC32;
@@ -24,7 +26,7 @@ import java.util.zip.CRC32;
  * allow see this stackoverflow thread about the same issue
  * Android 4.3 as a Bluetooth LE Peripheral (http://stackoverflow.com/questions/18008507/android-4-3-as-a-bluetooth-le-peripheral)
  */
-public class BroadcastDeviceActivity extends AppCompatActivity {
+public class BroadcastDeviceActivity extends BaseActivity {
 
     private TextView logView_;
 
@@ -50,6 +52,7 @@ public class BroadcastDeviceActivity extends AppCompatActivity {
         openButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                // showMessage(Utils.b16encode(DoorProtocol.openDoorV2("123456", "18600091651")));
                 openDoor();
             }
         });
@@ -95,21 +98,9 @@ public class BroadcastDeviceActivity extends AppCompatActivity {
             .build();
 
         // build data
-        // byte[] rawData = DoorProtocol.openDoor(0);
-        byte[] rawData = new byte[] {
-            0x16, // length
-            0x43, 0x01, // control
-            0x01, // sequence
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // password
-            0x01, 0x08, 0x06, 0x00, 0x02, 0x05, 0x00, 0x01, 0x09, 0x02, 0x04, // phone number (should be BCD encoded)
-        };
-        CRC32 crc32 = new CRC32();
-        crc32.update(rawData);
-        showMessage("raw data length: " + rawData.length);
         ParcelUuid uuid = ParcelUuid.fromString("887B0D8B-768C-42FB-B3F5-1B87E3F16EAE");
         AdvertiseData data = new AdvertiseData.Builder()
-            .setIncludeDeviceName(true)
-            .addServiceData(uuid, rawData)
+            .addServiceData(uuid, DoorProtocol.openDoorV2("123456", "18600091651"))
             .build();
 
         advertiser.startAdvertising(settings, data, new AdvertiseCallback() {
