@@ -180,18 +180,20 @@ public class MainForm extends JFrame {
              node != null; node = node.getNext(), ++idx) {
             Frame frame = frameList[idx];
             showMessage(
-                String.format("[%03d]: [%20s] --> [%s]",
+                String.format("[%03d]: [%32s](%02d) --> [%s]",
                     idx, toString(node),
+                    org.objectweb.asm.Type.getArgumentTypes(methodNode.desc).length,
                     frame == null ? "null" : toString(frame)));
         }
     }
 
     private String toString(AbstractInsnNode node) {
+        String simpleName = node.getClass().getSimpleName();
         int opcode = node.getOpcode();
         if (opcode < 0) {
-            return "<pseudo-insn>";
+            return simpleName + "|<pseudo-insn>";
         }
-        return Printer.OPCODES[node.getOpcode()];
+        return simpleName + "|" + Printer.OPCODES[node.getOpcode()];
     }
 
     private String toString(Frame frame) {
@@ -199,7 +201,8 @@ public class MainForm extends JFrame {
         int stackSize = frame.getStackSize();
         for (int i = 0; i < stackSize; ++i) {
             SourceValue value = (SourceValue) frame.getStack(i);
-            builder.append(toString(value.insns));
+            Set<AbstractInsnNode> insns = value.insns;
+            builder.append(toString(insns));
             builder.append(',');
         }
         return builder.toString();

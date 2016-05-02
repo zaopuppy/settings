@@ -16,6 +16,7 @@
         </constraints>
         <properties>
           <text value="/Volumes/Data/source/settings/skeleton/java/JavaClassViewer/out/production/JavaClassViewer/com/zero/tools/javaclassviewer/Main.class"/>
+          <toolTipText value="drag and drop file to here"/>
         </properties>
       </component>
       <component id="54a2d" class="javax.swing.JButton" binding="viewClassButton_">

@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -48,7 +49,22 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
+            Log.e(TAG, "onScanResult");
+
             BluetoothDevice device = result.getDevice();
+
+            // output scan result
+            {
+                ScanRecord record = result.getScanRecord();
+                if (record != null) {
+                    byte[] data = record.getBytes();
+                    Log.e(TAG, Utils.b16encode(data));
+                } else {
+                    Log.e(TAG, "no scan record for " + device.getName());
+                }
+
+            }
+
             int oldSize = mListViewAdapter.getCount();
             mListViewAdapter.add(device);
             if (mAutoButton.isChecked() && mListViewAdapter.getCount() > oldSize) {
