@@ -1,5 +1,8 @@
 package com.zero.tools.javaclassviewer.ui;
 
+import com.sun.tools.attach.AttachNotSupportedException;
+import com.sun.tools.attach.VirtualMachine;
+import com.sun.tools.attach.VirtualMachineDescriptor;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.*;
@@ -124,7 +127,21 @@ public class MainForm extends JFrame {
         viewClassButton_.addActionListener((ActionEvent e) -> {
             classInfoText_.setText("");
             displayClassInfo(classPathText_.getText());
+            // displayVMInfo();
         });
+    }
+
+    private void displayVMInfo() {
+        try {
+            for (VirtualMachineDescriptor desc: VirtualMachine.list()) {
+                VirtualMachine vm = VirtualMachine.attach(desc.id());
+                showMessage(desc.displayName());
+                showMessage(vm.toString());
+            }
+        } catch (AttachNotSupportedException | IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private void showMessage(String msg) {

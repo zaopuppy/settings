@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/JavaClassViewer.iml" filepath="$PROJECT_DIR$/JavaClassViewer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/3rd/javaflow/commons-javaflow.iml" filepath="$PROJECT_DIR$/3rd/javaflow/commons-javaflow.iml" />
     </modules>
   </component>
 </project>
