@@ -12,6 +12,14 @@ import org.objectweb.asm.util.Printer;
 import org.objectweb.asm.util.TraceClassVisitor;
 
 import javax.swing.*;
+import javax.swing.event.TreeModelEvent;
+import javax.swing.event.TreeModelListener;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeModel;
+import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.UnsupportedFlavorException;
@@ -33,6 +41,7 @@ public class MainForm extends JFrame {
     private JButton viewClassButton_;
     private JTextArea classInfoText_;
     private JPanel mainPanel_;
+    private JTree classTree_;
 
     private final WindowListener windowListener_ = new WindowListener() {
         @Override
@@ -145,6 +154,10 @@ public class MainForm extends JFrame {
     }
 
     private void showMessage(String msg) {
+        classInfoText_.setText(msg);
+    }
+
+    private void appendMessage(String msg) {
         classInfoText_.append(msg + '\n');
     }
 
@@ -158,9 +171,7 @@ public class MainForm extends JFrame {
                 ClassReader reader =
                     new ClassReader(new BufferedInputStream(new FileInputStream(classPath)));
                 reader.accept(visitor, 0);
-                SwingUtilities.invokeLater(() -> {
-                    showMessage(out.toString());
-                });
+                showMessage(out.toString());
             }
 
             // check frames for all methods
@@ -170,9 +181,22 @@ public class MainForm extends JFrame {
                     new ClassReader(new BufferedInputStream(new FileInputStream(classPath)));
                 reader.accept(classNode, 0);
 
+                DefaultMutableTreeNode root = new DefaultMutableTreeNode(classNode);
+                DefaultTreeModel model = new DefaultTreeModel(root);
+                classTree_.setModel(model);
+                classTree_.setCellRenderer(new MyTreeCellRenderer());
+                classTree_.setShowsRootHandles(true);
+                classTree_.addTreeSelectionListener(e -> {
+                    JTree val = (JTree) e.getSource();
+                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) val.getLastSelectedPathComponent();
+                    showMessage(node.getUserObject().toString());
+                });
                 for (MethodNode methodNode: (java.util.List<MethodNode>)classNode.methods) {
+                    DefaultMutableTreeNode node = new DefaultMutableTreeNode(methodNode);
+                    model.insertNodeInto(node, root, root.getChildCount());
                     analyseMethod(classNode, methodNode);
                 }
+                classTree_.invalidate();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -239,5 +263,7 @@ public class MainForm extends JFrame {
             classPathText_, DnDConstants.ACTION_COPY_OR_MOVE, dropTargetListener_));
         setDropTarget(new DropTarget(
             classInfoText_, DnDConstants.ACTION_COPY_OR_MOVE, dropTargetListener_));
+        setDropTarget(new DropTarget(
+            classTree_, DnDConstants.ACTION_COPY_OR_MOVE, dropTargetListener_));
     }
 }
