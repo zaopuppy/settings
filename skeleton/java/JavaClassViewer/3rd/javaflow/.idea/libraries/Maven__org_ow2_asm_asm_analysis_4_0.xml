@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="Maven: org.ow2.asm:asm-analysis:4.0">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/ow2/asm/asm-analysis/4.0/asm-analysis-4.0.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/ow2/asm/asm-analysis/4.0/asm-analysis-4.0-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/ow2/asm/asm-analysis/4.0/asm-analysis-4.0-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../settings/skeleton/java/JavaClassViewer/libs/asm-5.1-src.zip!/" />
+    </SOURCES>
+  </library>
+</component>
