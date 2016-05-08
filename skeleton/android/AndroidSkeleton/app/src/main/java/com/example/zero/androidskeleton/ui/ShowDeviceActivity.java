@@ -20,11 +20,10 @@ import android.widget.TextView;
 import com.example.zero.androidskeleton.R;
 import com.example.zero.androidskeleton.bt.BtLeDevice;
 import com.example.zero.androidskeleton.bt.BtLeService;
+import com.example.zero.androidskeleton.bt.BtLeUtil;
 import com.example.zero.androidskeleton.bt.DoorProtocol;
 import com.example.zero.androidskeleton.storage.BtDeviceStorage;
 import com.example.zero.androidskeleton.utils.Utils;
-
-import java.nio.ByteBuffer;
 
 /**
  *
@@ -32,10 +31,11 @@ import java.nio.ByteBuffer;
  * * auto in range unlock
  * * report mobile phone number
  */
-public class ShowDeviceActivity extends AppCompatActivity {
+public class ShowDeviceActivity extends AppCompatActivity implements BtLeDevice.DeviceListener {
     private static final String TAG = "ShowDeviceActivity";
 
     private TextView mDetailText;
+    private Button openButton;
 
     private void log(String msg) {
         Log.i(TAG, msg + '\n');
@@ -54,14 +54,18 @@ public class ShowDeviceActivity extends AppCompatActivity {
         setContentView(R.layout.activity_show_device);
 
         Intent intent = getIntent();
-        BluetoothDevice device = intent.getParcelableExtra("device");
-        if (device == null) {
+        if (intent == null || intent.getExtras() == null) {
+            finish();
+            return;
+        }
+        Bundle bundle = intent.getExtras();
+
+        mDevice = BtLeService.INSTANCE.getDevice(bundle.getString("addr"));
+        if (mDevice == null) {
             Utils.makeToast(this, "no device supplied");
             finish();
             return;
         }
-
-        mDevice = new BtLeDevice(device);
 
         ActionBar actionBar = getSupportActionBar();
         Log.e(TAG, "action bar: " + actionBar);
@@ -75,10 +79,16 @@ public class ShowDeviceActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        mDevice.addDeviceListener(this);
+        super.onResume();
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.show_device_menu, menu);
 
-        if (mDevice.getState() == BtLeDevice.State.READY) {
+        if (mDevice != null && mDevice.getState() == BtLeDevice.State.READY) {
             menu.findItem(R.id.menu_connect).setVisible(false);
             menu.findItem(R.id.menu_disconnect).setVisible(true);
             menu.findItem(R.id.menu_refresh).setActionView(null);
@@ -112,6 +122,7 @@ public class ShowDeviceActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        mDevice.removeDeviceListener(this);
         mDevice.disconnectGatt();
         super.onPause();
     }
@@ -120,7 +131,7 @@ public class ShowDeviceActivity extends AppCompatActivity {
         mDetailText = (TextView) findViewById(R.id.device_detail);
         assert mDetailText != null;
 
-        final Button openButton = (Button) findViewById(R.id.open_button);
+        openButton = (Button) findViewById(R.id.open_button);
         assert openButton != null;
         openButton.setEnabled(false);
         openButton.setOnClickListener(new View.OnClickListener() {
@@ -134,33 +145,6 @@ public class ShowDeviceActivity extends AppCompatActivity {
                 }
                 AlertDialog dialog = createPasswordDialog();
                 dialog.show();
-            }
-        });
-
-        // setup event handler
-        mDevice.onReady(new Runnable() {
-            @Override
-            public void run() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        invalidateOptionsMenu();
-                        openButton.setEnabled(true);
-                    }
-                });
-            }
-        });
-        mDevice.onDisconnected(new Runnable() {
-            @Override
-            public void run() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        invalidateOptionsMenu();
-                        openButton.setEnabled(false);
-                    }
-                });
-
             }
         });
 
@@ -209,11 +193,11 @@ public class ShowDeviceActivity extends AppCompatActivity {
         BluetoothGattCharacteristic characteristic4 = null;
 
         for (BluetoothGattService service : mDevice.getServiceList()) {
-            Log.i(TAG, "service: " + BtLeService.uuidStr(service.getUuid()));
+            Log.i(TAG, "service: " + BtLeUtil.uuidStr(service.getUuid()));
 
             for (final BluetoothGattCharacteristic characteristic : service.getCharacteristics()) {
-                final int uuid16 = BtLeService.extractBtUuid(characteristic.getUuid());
-                if (BtLeService.isReservedUuid(uuid16)) {
+                final int uuid16 = BtLeUtil.extractBtUuid(characteristic.getUuid());
+                if (BtLeUtil.isReservedUuid(uuid16)) {
                     continue;
                 }
 
@@ -229,49 +213,6 @@ public class ShowDeviceActivity extends AppCompatActivity {
                         break;
                     case 0xfff4:
                         characteristic4 = characteristic;
-                        mDevice.onCharacteristicChanged(new BtLeDevice.CharacteristicChangedListener() {
-                            @Override
-                            public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic chara) {
-                                byte[] value = chara.getValue();
-                                if (value == null || value.length <= 0) {
-                                    // ignore
-                                    return;
-                                }
-
-                                final byte result = chara.getValue()[0];
-                                final String resultStr;
-                                switch (result) {
-                                    case DoorProtocol.RESULT_PASSWORD_CORRECT: {
-                                        resultStr = "开门密码正确";
-                                        Log.d(TAG, "save password: " + mPassword);
-                                        BtDeviceStorage.INSTANCE.put(mDevice.getAddress(), mPassword);
-                                        break;
-                                    }
-                                    case DoorProtocol.RESULT_PASSWORD_WRONG: {
-                                        resultStr = "开门密码错误";
-                                        Log.d(TAG, "bad password clear: " + mPassword);
-                                        BtDeviceStorage.INSTANCE.put(mDevice.getAddress(), -1);
-                                        break;
-                                    }
-                                    case DoorProtocol.RESULT_PASSWORD_CHANGED: {
-                                        resultStr = "修改密码成功";
-                                        Log.d(TAG, "password changed: " + mPassword);
-                                        BtDeviceStorage.INSTANCE.put(mDevice.getAddress(), mPassword);
-                                        break;
-                                    }
-                                    default: {
-                                        resultStr = "" + result;
-                                        break;
-                                    }
-                                }
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        showMsg("result: " + resultStr);
-                                    }
-                                });
-                            }
-                        });
                         break;
                     default:
                         // ignore
@@ -280,7 +221,7 @@ public class ShowDeviceActivity extends AppCompatActivity {
             }
         }
 
-        mDevice.makeNotify(characteristic4, new BtLeDevice.Listener<Boolean>() {
+        mDevice.makeNotify(characteristic4, new BtLeDevice.ResultListener<Boolean>() {
             @Override
             public void onResult(Boolean result) {
                 Log.e(TAG, "make notify: " + result);
@@ -292,7 +233,7 @@ public class ShowDeviceActivity extends AppCompatActivity {
             showMsg("invalid password?");
             return;
         }
-        mDevice.writeCharacteristic(characteristic1, msg, new BtLeDevice.Listener<Boolean>() {
+        mDevice.writeCharacteristic(characteristic1, msg, new BtLeDevice.ResultListener<Boolean>() {
             @Override
             public void onResult(Boolean result) {
                 Log.e(TAG, "write result: " + result);
@@ -301,4 +242,55 @@ public class ShowDeviceActivity extends AppCompatActivity {
     }
 
 
+    @Override
+    public void onDeviceStateChanged(BtLeDevice.State state) {
+        invalidateOptionsMenu();
+        if (state == BtLeDevice.State.READY) {
+            openButton.setEnabled(true);
+        } else {
+            openButton.setEnabled(false);
+        }
+    }
+
+    @Override
+    public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        byte[] value = characteristic.getValue();
+        if (value == null || value.length <= 0) {
+            // ignore
+            return;
+        }
+
+        final byte result = characteristic.getValue()[0];
+        final String resultStr;
+        switch (result) {
+            case DoorProtocol.RESULT_PASSWORD_CORRECT: {
+                resultStr = "开门密码正确";
+                Log.d(TAG, "save password: " + mPassword);
+                BtDeviceStorage.INSTANCE.put(mDevice.getAddress(), mPassword);
+                break;
+            }
+            case DoorProtocol.RESULT_PASSWORD_WRONG: {
+                resultStr = "开门密码错误";
+                Log.d(TAG, "bad password clear: " + mPassword);
+                BtDeviceStorage.INSTANCE.put(mDevice.getAddress(), -1);
+                break;
+            }
+            case DoorProtocol.RESULT_PASSWORD_CHANGED: {
+                resultStr = "修改密码成功";
+                Log.d(TAG, "password changed: " + mPassword);
+                BtDeviceStorage.INSTANCE.put(mDevice.getAddress(), mPassword);
+                break;
+            }
+            default: {
+                resultStr = "" + result;
+                break;
+            }
+        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                showMsg("result: " + resultStr);
+            }
+        });
+    }
 }

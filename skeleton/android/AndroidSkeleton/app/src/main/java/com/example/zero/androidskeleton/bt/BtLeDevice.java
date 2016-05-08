@@ -17,8 +17,6 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     private static final String TAG = "BtLeDevice";
 
-    //private final ThreadPoolExecutor mExecutor;
-
     public enum State {
         DISCONNECTED,
         CONNECTING,
@@ -28,25 +26,34 @@ public class BtLeDevice extends BluetoothGattCallback {
         DISCONNECTING,
     }
 
-    public void onReady(Runnable runnable) {
-        if (runnable == null) {
-            mReadyEventHandler = EMPTY_HANDLER;
-        } else {
-            mReadyEventHandler = runnable;
-        }
+    public interface ResultListener<T> {
+        void onResult(T result);
     }
 
-    public void onDisconnected(Runnable runnable) {
-        if (runnable == null) {
-            mDisconnectedEventHandler = EMPTY_HANDLER;
-        } else {
-            mDisconnectedEventHandler = runnable;
-        }
+    public interface DeviceListener {
+        void onDeviceStateChanged(State state);
+        void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic);
     }
 
-    public void onCharacteristicChanged(CharacteristicChangedListener listener) {
-        mCharacteristicChangedListener = listener;
-    }
+    //public void onReady(Runnable runnable) {
+    //    if (runnable == null) {
+    //        mReadyEventHandler = EMPTY_HANDLER;
+    //    } else {
+    //        mReadyEventHandler = runnable;
+    //    }
+    //}
+    //
+    //public void onDisconnected(Runnable runnable) {
+    //    if (runnable == null) {
+    //        mDisconnectedEventHandler = EMPTY_HANDLER;
+    //    } else {
+    //        mDisconnectedEventHandler = runnable;
+    //    }
+    //}
+    //
+    //public void onCharacteristicChanged(CharacteristicChangedListener listener) {
+    //    mCharacteristicChangedListener = listener;
+    //}
 
     private final BluetoothDevice mDevice;
 
@@ -71,13 +78,13 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     private static class ReadTask implements Task {
         private final BluetoothGattCharacteristic characteristic;
-        private final Listener<byte[]> listener;
+        private final ResultListener<byte[]> listener;
         private final BluetoothGatt gatt;
 
         private ReadTask(
             BluetoothGatt gatt,
             BluetoothGattCharacteristic characteristic,
-            Listener<byte[]> listener) {
+            ResultListener<byte[]> listener) {
             this.gatt = gatt;
             this.characteristic = characteristic;
             this.listener = listener;
@@ -99,8 +106,8 @@ public class BtLeDevice extends BluetoothGattCallback {
 
             if (!this.characteristic.equals(characteristic)) {
                 throw new IllegalStateException(
-                    "expect=" + BtLeService.uuidStr(this.characteristic.getUuid())
-                        + ", actual=" + BtLeService.uuidStr(characteristic.getUuid()));
+                    "expect=" + BtLeUtil.uuidStr(this.characteristic.getUuid())
+                        + ", actual=" + BtLeUtil.uuidStr(characteristic.getUuid()));
             }
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 listener.onResult(null);
@@ -124,13 +131,13 @@ public class BtLeDevice extends BluetoothGattCallback {
         private final BluetoothGatt gatt;
         private final BluetoothGattCharacteristic characteristic;
         private final byte[] data;
-        private final Listener<Boolean> listener;
+        private final ResultListener<Boolean> listener;
 
         private WriteTask(
             BluetoothGatt gatt,
             BluetoothGattCharacteristic characteristic,
             byte[] data,
-            Listener<Boolean> listener) {
+            ResultListener<Boolean> listener) {
             this.gatt = gatt;
             this.characteristic = characteristic;
             this.data = data;
@@ -157,8 +164,8 @@ public class BtLeDevice extends BluetoothGattCallback {
 
             if (!this.characteristic.equals(characteristic)) {
                 throw new IllegalStateException(
-                    "expect=" + BtLeService.uuidStr(this.characteristic.getUuid())
-                        + ", actual=" + BtLeService.uuidStr(characteristic.getUuid()));
+                    "expect=" + BtLeUtil.uuidStr(this.characteristic.getUuid())
+                        + ", actual=" + BtLeUtil.uuidStr(characteristic.getUuid()));
             }
 
             if (status != BluetoothGatt.GATT_SUCCESS) {
@@ -176,13 +183,13 @@ public class BtLeDevice extends BluetoothGattCallback {
         private final BluetoothGattCharacteristic characteristic;
         private final BluetoothGattDescriptor descriptor;
         private final byte[] data;
-        private final Listener<Boolean> listener;
+        private final ResultListener<Boolean> listener;
 
         public WriteDescriptorTask(
             BluetoothGatt gatt,
             BluetoothGattCharacteristic characteristic,
             BluetoothGattDescriptor descriptor, byte[] data,
-            Listener<Boolean> listener) {
+            ResultListener<Boolean> listener) {
             this.gatt = gatt;
             this.characteristic = characteristic;
             this.descriptor = descriptor;
@@ -211,8 +218,8 @@ public class BtLeDevice extends BluetoothGattCallback {
 
             if (!this.descriptor.equals(descriptor)) {
                 throw new IllegalStateException(
-                    "expect=" + BtLeService.uuidStr(this.descriptor.getUuid())
-                        + ", actual=" + BtLeService.uuidStr(descriptor.getUuid()));
+                    "expect=" + BtLeUtil.uuidStr(this.descriptor.getUuid())
+                        + ", actual=" + BtLeUtil.uuidStr(descriptor.getUuid()));
             }
 
             if (status != BluetoothGatt.GATT_SUCCESS) {
@@ -246,31 +253,6 @@ public class BtLeDevice extends BluetoothGattCallback {
         }
     }
 
-    public interface CharacteristicChangedListener {
-        void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic);
-    }
-
-    // TODO: currently only support one device
-    private static final Runnable EMPTY_HANDLER = new Runnable() {
-        @Override
-        public void run() {
-            // do nothing
-        }
-    };
-    private Runnable mReadyEventHandler = EMPTY_HANDLER;
-    private Runnable mDisconnectedEventHandler = EMPTY_HANDLER;
-
-    private CharacteristicChangedListener mCharacteristicChangedListener = new CharacteristicChangedListener() {
-        @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            Log.d(TAG, "onCharacteristicChanged default listener");
-        }
-    };
-
-    public interface Listener<T> {
-        void onResult(T result);
-    }
-
     public BtLeDevice(BluetoothDevice device) {
         mDevice = device;
     }
@@ -283,13 +265,17 @@ public class BtLeDevice extends BluetoothGattCallback {
         return mDevice.getAddress();
     }
 
+    private final ConcurrentLinkedQueue<DeviceListener> mDeviceListenerList = new ConcurrentLinkedQueue<>();
+
+    public void addDeviceListener(DeviceListener l) {
+        mDeviceListenerList.add(l);
+    }
+
+    public void removeDeviceListener(DeviceListener l) {
+        mDeviceListenerList.remove(l);
+    }
+
     public void connectGatt(Context context) {
-        if (getState() == State.READY) {
-            if (mReadyEventHandler != null) {
-                mReadyEventHandler.run();
-            }
-            return;
-        }
         mGatt = mDevice.connectGatt(context, false, this);
     }
 
@@ -299,11 +285,6 @@ public class BtLeDevice extends BluetoothGattCallback {
             mGatt = null;
         }
     }
-
-    //public boolean writeCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value) {
-    //    characteristic.setValue(value);
-    //    return mGatt.writeCharacteristic(characteristic);
-    //}
 
     public State getState() {
         return mState;
@@ -315,18 +296,7 @@ public class BtLeDevice extends BluetoothGattCallback {
         }
         this.mState = state;
 
-        switch (state) {
-            case READY:
-                mReadyEventHandler.run();
-                break;
-            case DISCONNECTING:
-            case DISCONNECTED:
-                mDisconnectedEventHandler.run();
-                break;
-            default:
-                // ignore
-                break;
-        }
+        notifyDeviceStateChanged(state);
     }
 
     @Override
@@ -359,7 +329,7 @@ public class BtLeDevice extends BluetoothGattCallback {
     public BluetoothGattCharacteristic getCharacteristic(int uuid16) {
         for (BluetoothGattService service: mGatt.getServices()) {
             for (BluetoothGattCharacteristic characteristic: service.getCharacteristics()) {
-                int tmpUuid16 = BtLeService.extractBtUuid(characteristic.getUuid());
+                int tmpUuid16 = BtLeUtil.extractBtUuid(characteristic.getUuid());
                 if (uuid16 == tmpUuid16) {
                     return characteristic;
                 }
@@ -390,7 +360,7 @@ public class BtLeDevice extends BluetoothGattCallback {
         setState(State.READY);
     }
 
-    public boolean makeNotify(BluetoothGattCharacteristic characteristic, Listener<Boolean> listener) {
+    public boolean makeNotify(BluetoothGattCharacteristic characteristic, ResultListener<Boolean> listener) {
         //int prop = characteristic.getProperties();
         //if (Utils.isFlagSet(prop, BluetoothGattCharacteristic.PROPERTY_NOTIFY)) {
         //    Log.d(TAG, BtLeService.uuidStr(characteristic.getUuid()) + " already notify");
@@ -416,13 +386,13 @@ public class BtLeDevice extends BluetoothGattCallback {
         int prop = characteristic.getProperties();
 
         Log.d(TAG,
-            "checkProperties uuid=" + BtLeService.uuidStr(characteristic.getUuid())
+            "checkProperties uuid=" + BtLeUtil.uuidStr(characteristic.getUuid())
                 + ", prop=" + prop
                 + ", expect-prop=" + expectProp);
 
         Log.d(TAG, "current prop=" + prop);
         if (!Utils.isFlagSet(prop, expectProp)) {
-            Log.d(TAG, "not expect prop: " + BtLeService.uuidStr(characteristic.getUuid()));
+            Log.d(TAG, "not expect prop: " + BtLeUtil.uuidStr(characteristic.getUuid()));
             return false;
         }
 
@@ -464,8 +434,8 @@ public class BtLeDevice extends BluetoothGattCallback {
         return gatt.writeCharacteristic(characteristic);
     }
 
-    public void readCharacteristic(BluetoothGattCharacteristic characteristic, Listener<byte[]> listener) {
-        Log.d(TAG, "readCharacteristic: " + BtLeService.uuidStr(characteristic.getUuid()));
+    public void readCharacteristic(BluetoothGattCharacteristic characteristic, ResultListener<byte[]> listener) {
+        Log.d(TAG, "readCharacteristic: " + BtLeUtil.uuidStr(characteristic.getUuid()));
         mTaskQueue.offer(new ReadTask(mGatt, characteristic, listener));
         processTask();
     }
@@ -479,7 +449,7 @@ public class BtLeDevice extends BluetoothGattCallback {
     // FIXME: Are all these callback called in the same thread? if not, there will be some problem of this
     @Override
     public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-        Log.d(TAG, "onCharacteristicRead: " + BtLeService.uuidStr(characteristic.getUuid()) + " status=" + status);
+        Log.d(TAG, "onCharacteristicRead: " + BtLeUtil.uuidStr(characteristic.getUuid()) + " status=" + status);
 
         synchronized (mTaskLock) {
             if (mCurrentTask == null) {
@@ -491,15 +461,15 @@ public class BtLeDevice extends BluetoothGattCallback {
         }
     }
 
-    public void writeCharacteristic(BluetoothGattCharacteristic characteristic, byte[] data, Listener<Boolean> listener) {
-        Log.d(TAG, "writeCharacteristic: " + BtLeService.uuidStr(characteristic.getUuid()));
+    public void writeCharacteristic(BluetoothGattCharacteristic characteristic, byte[] data, ResultListener<Boolean> listener) {
+        Log.d(TAG, "writeCharacteristic: " + BtLeUtil.uuidStr(characteristic.getUuid()));
         mTaskQueue.offer(new WriteTask(mGatt, characteristic, data, listener));
         processTask();
     }
 
     @Override
     public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-        Log.d(TAG, "onCharacteristicWrite: " + BtLeService.uuidStr(characteristic.getUuid()) + " status=" + status);
+        Log.d(TAG, "onCharacteristicWrite: " + BtLeUtil.uuidStr(characteristic.getUuid()) + " status=" + status);
 
         synchronized (mTaskLock) {
             if (mCurrentTask == null) {
@@ -513,12 +483,12 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     @Override
     public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        Log.d(TAG, "onCharacteristicChanged, uuid=" + BtLeService.uuidStr(characteristic.getUuid()) + ", value-length=" + characteristic.getValue().length);
+        Log.d(TAG, "onCharacteristicChanged, uuid=" + BtLeUtil.uuidStr(characteristic.getUuid()) + ", value-length=" + characteristic.getValue().length);
         ByteBuffer buffer = ByteBuffer.allocate(2);
         buffer.put(characteristic.getValue());
         buffer.flip();
-        Log.e(TAG, BtLeService.uuidStr(characteristic.getUuid()) + " new value: " + (int)buffer.get());
-        mCharacteristicChangedListener.onCharacteristicChanged(gatt, characteristic);
+        Log.e(TAG, BtLeUtil.uuidStr(characteristic.getUuid()) + " new value: " + (int)buffer.get());
+        notifyCharacteristicChanged(gatt, characteristic);
     }
 
     @Override
@@ -538,4 +508,17 @@ public class BtLeDevice extends BluetoothGattCallback {
             processTask();
         }
     }
+
+    private void notifyDeviceStateChanged(State state) {
+        for (DeviceListener l: mDeviceListenerList) {
+            l.onDeviceStateChanged(state);
+        }
+    }
+
+    private void notifyCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        for (DeviceListener l: mDeviceListenerList) {
+            l.onCharacteristicChanged(gatt, characteristic);
+        }
+    }
+
 }

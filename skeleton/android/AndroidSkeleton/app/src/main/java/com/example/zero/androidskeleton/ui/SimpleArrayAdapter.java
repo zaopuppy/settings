@@ -8,19 +8,17 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import com.example.zero.androidskeleton.R;
+import com.example.zero.androidskeleton.bt.BtLeDevice;
 
 import java.util.ArrayList;
 
 /**
  * Created by zero on 2016/4/4.
  */
-public class SimpleArrayAdapter extends ArrayAdapter<BluetoothDevice> {
+public class SimpleArrayAdapter extends ArrayAdapter<BtLeDevice> {
 
     private final LayoutInflater mInflater;
     private final int mResourceId;
-
-    // FIXME: not good... duplicate data...
-    private final ArrayList<BluetoothDevice> mDeviceList = new ArrayList<>(4);
 
     public SimpleArrayAdapter(Context context, int resource) {
         super(context, resource);
@@ -30,33 +28,13 @@ public class SimpleArrayAdapter extends ArrayAdapter<BluetoothDevice> {
     }
 
     @Override
-    public void add(BluetoothDevice object) {
-        if (!mDeviceList.contains(object)) {
-            mDeviceList.add(object);
-            super.add(object);
-        }
-    }
-
-    @Override
-    public void remove(BluetoothDevice object) {
-        mDeviceList.remove(object);
-        super.remove(object);
-    }
-
-    @Override
-    public void clear() {
-        mDeviceList.clear();
-        super.clear();
-    }
-
-    @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         // return super.getView(position, convertView, parent);
         if (convertView == null) {
             convertView = mInflater.inflate(mResourceId, parent, false);
         }
 
-        BluetoothDevice device = getItem(position);
+        BtLeDevice device = getItem(position);
 
         TextView nameView = (TextView) convertView.findViewById(R.id.name);
         TextView addressView = (TextView) convertView.findViewById(R.id.address);

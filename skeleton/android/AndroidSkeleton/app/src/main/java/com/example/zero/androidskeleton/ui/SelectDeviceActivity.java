@@ -2,11 +2,6 @@ package com.example.zero.androidskeleton.ui;
 
 import android.Manifest;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.le.ScanCallback;
-import android.bluetooth.le.ScanRecord;
-import android.bluetooth.le.ScanResult;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -22,11 +17,8 @@ import android.widget.*;
 import com.example.zero.androidskeleton.R;
 import com.example.zero.androidskeleton.bt.BtLeDevice;
 import com.example.zero.androidskeleton.bt.BtLeService;
-import com.example.zero.androidskeleton.bt.DoorProtocol;
-import com.example.zero.androidskeleton.storage.BtDeviceStorage;
 import com.example.zero.androidskeleton.utils.Utils;
 
-import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -41,107 +33,73 @@ public class SelectDeviceActivity extends AppCompatActivity {
         Log.i(TAG, msg + '\n');
     }
 
-    private boolean mScanning = false;
-
-    private class MyScanCallback extends ScanCallback {
+    private class MyScanListener implements BtLeService.ScanListener {
 
         @Override
-        public void onScanResult(int callbackType, ScanResult result) {
-            Log.e(TAG, "onScanResult");
-
-            BluetoothDevice device = result.getDevice();
-            int oldSize = mListViewAdapter.getCount();
-            mListViewAdapter.add(device);
-            if (mAutoButton.isChecked() && mListViewAdapter.getCount() > oldSize) {
-                int password = BtDeviceStorage.INSTANCE.get(device.getAddress());
-                if (password >= 0) {
-                    open(device, password);
-                }
-            }
-
-            if (mListViewAdapter.getCount() > oldSize) {
-                ScanRecord record = result.getScanRecord();
-                if (record != null) {
-                    byte[] data = record.getBytes();
-                    Log.e(TAG, Utils.b16encode(data));
-                    mCopyArea.setText(Utils.b16encode(data) + '\n');
-                } else {
-                    Log.e(TAG, "no scan record for " + device.getName());
-                }
-            }
-        }
-
-        private void open(final BluetoothDevice dev, final int password) {
-            final BtLeDevice device = new BtLeDevice(dev);
-            device.onReady(new Runnable() {
-                @Override
-                public void run() {
-                    device.onReady(null);
-                    device.onCharacteristicChanged(new BtLeDevice.CharacteristicChangedListener() {
-                        @Override
-                        public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic chara) {
-                            byte[] value = chara.getValue();
-                            if (value == null || value.length <= 0) {
-                                // ignore
-                                return;
-                            }
-
-                            final byte result = chara.getValue()[0];
-                            Log.d(TAG, "onCharacteristicChanged: " + result);
-                            switch (result) {
-                                case DoorProtocol.RESULT_PASSWORD_CORRECT: {
-                                    Log.d(TAG, "save password: " + password);
-                                    BtDeviceStorage.INSTANCE.put(device.getAddress(), password);
-                                    runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            Utils.makeToast(getApplicationContext(), device.getName() + ": 开门密码正确");
-                                        }
-                                    });
-                                    break;
-                                }
-                                case DoorProtocol.RESULT_PASSWORD_WRONG: {
-                                    Log.d(TAG, "bad password clear");
-                                    BtDeviceStorage.INSTANCE.put(device.getAddress(), -1);
-                                    runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            Utils.makeToast(getApplicationContext(), device.getName() + ": 开门密码错误");
-                                        }
-                                    });
-                                    break;
-                                }
-                                default:
-                                    // ignore
-                                    break;
-                            }
-                            device.disconnectGatt();
-                        }
-                    });
-                    DoorProtocol.openDoor(device, password);
-                }
-            });
-            device.connectGatt(getApplicationContext());
+        public void onDeviceFound(BtLeDevice dev) {
+            mListViewAdapter.add(dev);
         }
 
         @Override
-        public void onBatchScanResults(List<ScanResult> results) {
-            mScanning = false;
+        public void onScanChange(boolean isScanning) {
             invalidateOptionsMenu();
         }
 
-        @Override
-        public void onScanFailed(int errorCode) {
-            mScanning = false;
-            invalidateOptionsMenu();
-        }
-
-        public boolean isScanning() {
-            return mScanning;
-        }
+        //private void open(final BluetoothDevice dev, final int password) {
+        //    final BtLeDevice device = new BtLeDevice(dev);
+        //    device.onReady(new Runnable() {
+        //        @Override
+        //        public void run() {
+        //            device.onReady(null);
+        //            device.onCharacteristicChanged(new BtLeDevice.CharacteristicChangedListener() {
+        //                @Override
+        //                public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic chara) {
+        //                    byte[] value = chara.getValue();
+        //                    if (value == null || value.length <= 0) {
+        //                        // ignore
+        //                        return;
+        //                    }
+        //
+        //                    final byte result = chara.getValue()[0];
+        //                    Log.d(TAG, "onCharacteristicChanged: " + result);
+        //                    switch (result) {
+        //                        case DoorProtocol.RESULT_PASSWORD_CORRECT: {
+        //                            Log.d(TAG, "save password: " + password);
+        //                            BtDeviceStorage.INSTANCE.put(device.getAddress(), password);
+        //                            runOnUiThread(new Runnable() {
+        //                                @Override
+        //                                public void run() {
+        //                                    Utils.makeToast(getApplicationContext(), device.getName() + ": 开门密码正确");
+        //                                }
+        //                            });
+        //                            break;
+        //                        }
+        //                        case DoorProtocol.RESULT_PASSWORD_WRONG: {
+        //                            Log.d(TAG, "bad password clear");
+        //                            BtDeviceStorage.INSTANCE.put(device.getAddress(), -1);
+        //                            runOnUiThread(new Runnable() {
+        //                                @Override
+        //                                public void run() {
+        //                                    Utils.makeToast(getApplicationContext(), device.getName() + ": 开门密码错误");
+        //                                }
+        //                            });
+        //                            break;
+        //                        }
+        //                        default:
+        //                            // ignore
+        //                            break;
+        //                    }
+        //                    device.disconnectGatt();
+        //                }
+        //            });
+        //            DoorProtocol.openDoor(device, password);
+        //        }
+        //    });
+        //    device.connectGatt(getApplicationContext());
+        //}
     }
 
-    private final MyScanCallback mScanCallback = new MyScanCallback();
+    private final MyScanListener mScanListener = new MyScanListener();
 
     private void checkAllMyPermission() {
         final String[] permission_list = {
@@ -179,31 +137,28 @@ public class SelectDeviceActivity extends AppCompatActivity {
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
-        setupUiComp();
-
-
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Utils.makeToast(this, "该手机不支持低功耗蓝牙");
             finish();
         }
 
-        BtLeService.INSTANCE.init();
         if (BtLeService.INSTANCE.getAdapter() == null || BtLeService.INSTANCE.getScanner() == null) {
             Utils.makeToast(this, "蓝牙功能不支持或者开关未打开");
             finish();
         }
+
+        setupUiComp();
+
     }
 
     private void startScan() {
         mListViewAdapter.clear();
-        BtLeService.INSTANCE.startScan(mScanCallback);
-        mScanning = true;
+        BtLeService.INSTANCE.startScan();
         invalidateOptionsMenu();
     }
 
     private void stopScan() {
-        BtLeService.INSTANCE.stopScan(mScanCallback);
-        mScanning = false;
+        BtLeService.INSTANCE.stopScan();
         invalidateOptionsMenu();
     }
 
@@ -211,6 +166,7 @@ public class SelectDeviceActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        BtLeService.INSTANCE.addScanListener(mScanListener);
         mTimer = new Timer("le-scan-timer");
         mTimer.schedule(new TimerTask() {
             @Override
@@ -218,7 +174,7 @@ public class SelectDeviceActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        if (mScanning) {
+                        if (BtLeService.INSTANCE.isScanning()) {
                             stopScan();
                             startScan();
                         }
@@ -230,6 +186,7 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        BtLeService.INSTANCE.removeScanListener(mScanListener);
         mTimer.cancel();
         stopScan();
         super.onPause();
@@ -239,7 +196,7 @@ public class SelectDeviceActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.select_device_menu, menu);
         // if (mScanner.isScanning()) {
-        if (mScanning) {
+        if (BtLeService.INSTANCE.isScanning()) {
             menu.findItem(R.id.menu_scan).setVisible(false);
             menu.findItem(R.id.menu_stop).setVisible(true);
             menu.findItem(R.id.menu_refresh).setActionView(
@@ -294,14 +251,14 @@ public class SelectDeviceActivity extends AppCompatActivity {
         device_list_view.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                BtLeService.INSTANCE.stopScan(mScanCallback);
+                BtLeService.INSTANCE.stopScan();
 
                 // get selected info
-                final BluetoothDevice device = mListViewAdapter.getItem(position);
+                final BtLeDevice device = mListViewAdapter.getItem(position);
                 log("device: " + device.getName() + ", " + device.getAddress());
 
                 Bundle bundle = new Bundle();
-                bundle.putParcelable("device", device);
+                bundle.putString("addr", device.getAddress());
 
                 Intent intent = new Intent(SelectDeviceActivity.this, ShowDeviceActivity.class);
                 intent.putExtras(bundle);

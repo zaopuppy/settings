@@ -77,7 +77,7 @@ public class DoorProtocol {
 
         BluetoothGattCharacteristic characteristic1 = device.getCharacteristic(0xfff1);
         BluetoothGattCharacteristic characteristic4 = device.getCharacteristic(0xfff4);
-        device.makeNotify(characteristic4, new BtLeDevice.Listener<Boolean>() {
+        device.makeNotify(characteristic4, new BtLeDevice.ResultListener<Boolean>() {
             @Override
             public void onResult(Boolean result) {
                 Log.e(TAG, "make notify: " + result);
@@ -88,7 +88,7 @@ public class DoorProtocol {
             // showMsg("invalid password?");
             return;
         }
-        device.writeCharacteristic(characteristic1, msg, new BtLeDevice.Listener<Boolean>() {
+        device.writeCharacteristic(characteristic1, msg, new BtLeDevice.ResultListener<Boolean>() {
             @Override
             public void onResult(Boolean result) {
                 Log.e(TAG, "write result: " + result);
