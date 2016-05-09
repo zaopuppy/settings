@@ -175,7 +175,55 @@ public class ShowDeviceActivity extends AppCompatActivity implements BtLeDevice.
             }
         });
 
+        Button changeButton = (Button) findViewById(R.id.change_button);
+        assert changeButton != null;
+        changeButton.setEnabled(false);
+        changeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //future = mDevice.writeCharacteristic(0xfff1, new byte[0]);
+                //future.
+            }
+        });
+
     }
+
+    private static abstract class State {
+
+        abstract void handle(StateMachine machine, int event, Object o);
+
+        private void setState(StateMachine machine, State newState) {
+            machine.setState(newState);
+        }
+    }
+
+    private static class StateMachine {
+
+        private State state;
+
+        public StateMachine(State initState) {
+            this.state = initState;
+        }
+
+        public synchronized void handle(int event, Object o) {
+            state.handle(this, event, o);
+        }
+
+        void setState(State newState) {
+            this.state = newState;
+        }
+    }
+
+    // CONNECT --> OPEN --> TRANSFER-NUM -> DONE
+    private State WAIT_FOR_CONNECTION = new State() {
+        @Override
+        void handle(StateMachine machine, int event, Object o) {
+            switch (event) {
+                default:
+                    break;
+            }
+        }
+    };
 
     private int mPassword = 0;
     private AlertDialog createPasswordDialog() {
