@@ -7,8 +7,10 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.util.Log;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
 
 
 /**
@@ -41,20 +43,28 @@ public class BtLeService {
                 return;
             }
 
+            final BtLeDevice wrappedDev;
             synchronized (mDeviceMap) {
                 String key = dev.getAddress();
+                Log.e(TAG, "key: " + key);
                 if (!mDeviceMap.containsKey(key)) {
-                    BtLeDevice wrappedDev = new BtLeDevice(dev);
+                    wrappedDev = new BtLeDevice(dev);
                     mDeviceMap.put(key, wrappedDev);
-                    notifyDeviceFound(wrappedDev);
+                } else {
+                    wrappedDev = mDeviceMap.get(key);
                 }
             }
+            notifyDeviceFound(wrappedDev);
         }
     };
 
     private void notifyDeviceFound(BtLeDevice dev) {
         for (ScanListener l: mScanListenerList) {
-            l.onDeviceFound(dev);
+            try {
+                l.onDeviceFound(dev);
+            } catch (Exception e) {
+                // ignore
+            }
         }
     }
 
@@ -82,9 +92,6 @@ public class BtLeService {
     public int stopScan() {
         getScanner().stopScan(mScanCallback);
         mScanning = false;
-        synchronized (mDeviceMap) {
-            mDeviceMap.clear();
-        }
         return BtCode.OK;
     }
 
@@ -102,10 +109,21 @@ public class BtLeService {
         mScanListenerList.remove(l);
     }
 
+    public void clearDevices() {
+        synchronized (mDeviceMap) {
+            for (Map.Entry<String, BtLeDevice> e: mDeviceMap.entrySet()) {
+                e.getValue().disconnectGatt();
+            }
+            mDeviceMap.clear();
+        }
+    }
+
     public BtLeDevice getDevice(String addr) {
         if (addr == null || addr.length() <= 0) {
             return null;
         }
-        return mDeviceMap.get(addr);
+        synchronized (mDeviceMap) {
+            return mDeviceMap.get(addr);
+        }
     }
 }

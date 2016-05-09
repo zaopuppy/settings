@@ -35,26 +35,6 @@ public class BtLeDevice extends BluetoothGattCallback {
         void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic);
     }
 
-    //public void onReady(Runnable runnable) {
-    //    if (runnable == null) {
-    //        mReadyEventHandler = EMPTY_HANDLER;
-    //    } else {
-    //        mReadyEventHandler = runnable;
-    //    }
-    //}
-    //
-    //public void onDisconnected(Runnable runnable) {
-    //    if (runnable == null) {
-    //        mDisconnectedEventHandler = EMPTY_HANDLER;
-    //    } else {
-    //        mDisconnectedEventHandler = runnable;
-    //    }
-    //}
-    //
-    //public void onCharacteristicChanged(CharacteristicChangedListener listener) {
-    //    mCharacteristicChangedListener = listener;
-    //}
-
     private final BluetoothDevice mDevice;
 
     private State mState = State.DISCONNECTED;
@@ -511,13 +491,21 @@ public class BtLeDevice extends BluetoothGattCallback {
 
     private void notifyDeviceStateChanged(State state) {
         for (DeviceListener l: mDeviceListenerList) {
-            l.onDeviceStateChanged(state);
+            try {
+                l.onDeviceStateChanged(state);
+            } catch (Exception e) {
+                // ignore
+            }
         }
     }
 
     private void notifyCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         for (DeviceListener l: mDeviceListenerList) {
-            l.onCharacteristicChanged(gatt, characteristic);
+            try {
+                l.onCharacteristicChanged(gatt, characteristic);
+            } catch (Exception e) {
+                // ignore
+            }
         }
     }
 

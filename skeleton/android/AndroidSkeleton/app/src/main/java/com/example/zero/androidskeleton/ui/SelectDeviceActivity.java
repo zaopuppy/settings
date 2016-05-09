@@ -26,7 +26,6 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
     private static final String TAG = "SelectDeviceActivity";
 
-    private EditText mCopyArea;
     private SimpleArrayAdapter mListViewAdapter;
 
     private void log(final String msg) {
@@ -44,59 +43,6 @@ public class SelectDeviceActivity extends AppCompatActivity {
         public void onScanChange(boolean isScanning) {
             invalidateOptionsMenu();
         }
-
-        //private void open(final BluetoothDevice dev, final int password) {
-        //    final BtLeDevice device = new BtLeDevice(dev);
-        //    device.onReady(new Runnable() {
-        //        @Override
-        //        public void run() {
-        //            device.onReady(null);
-        //            device.onCharacteristicChanged(new BtLeDevice.CharacteristicChangedListener() {
-        //                @Override
-        //                public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic chara) {
-        //                    byte[] value = chara.getValue();
-        //                    if (value == null || value.length <= 0) {
-        //                        // ignore
-        //                        return;
-        //                    }
-        //
-        //                    final byte result = chara.getValue()[0];
-        //                    Log.d(TAG, "onCharacteristicChanged: " + result);
-        //                    switch (result) {
-        //                        case DoorProtocol.RESULT_PASSWORD_CORRECT: {
-        //                            Log.d(TAG, "save password: " + password);
-        //                            BtDeviceStorage.INSTANCE.put(device.getAddress(), password);
-        //                            runOnUiThread(new Runnable() {
-        //                                @Override
-        //                                public void run() {
-        //                                    Utils.makeToast(getApplicationContext(), device.getName() + ": 开门密码正确");
-        //                                }
-        //                            });
-        //                            break;
-        //                        }
-        //                        case DoorProtocol.RESULT_PASSWORD_WRONG: {
-        //                            Log.d(TAG, "bad password clear");
-        //                            BtDeviceStorage.INSTANCE.put(device.getAddress(), -1);
-        //                            runOnUiThread(new Runnable() {
-        //                                @Override
-        //                                public void run() {
-        //                                    Utils.makeToast(getApplicationContext(), device.getName() + ": 开门密码错误");
-        //                                }
-        //                            });
-        //                            break;
-        //                        }
-        //                        default:
-        //                            // ignore
-        //                            break;
-        //                    }
-        //                    device.disconnectGatt();
-        //                }
-        //            });
-        //            DoorProtocol.openDoor(device, password);
-        //        }
-        //    });
-        //    device.connectGatt(getApplicationContext());
-        //}
     }
 
     private final MyScanListener mScanListener = new MyScanListener();
@@ -229,10 +175,6 @@ public class SelectDeviceActivity extends AppCompatActivity {
 
     private ToggleButton mAutoButton;
     private void setupUiComp() {
-
-        mCopyArea = (EditText) findViewById(R.id.copy_area);
-        assert mCopyArea != null;
-
         mAutoButton = (ToggleButton) findViewById(R.id.auto_button);
         assert mAutoButton != null;
         mAutoButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {

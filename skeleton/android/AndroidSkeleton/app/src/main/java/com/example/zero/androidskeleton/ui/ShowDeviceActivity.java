@@ -88,14 +88,41 @@ public class ShowDeviceActivity extends AppCompatActivity implements BtLeDevice.
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.show_device_menu, menu);
 
-        if (mDevice != null && mDevice.getState() == BtLeDevice.State.READY) {
-            menu.findItem(R.id.menu_connect).setVisible(false);
-            menu.findItem(R.id.menu_disconnect).setVisible(true);
-            menu.findItem(R.id.menu_refresh).setActionView(null);
+        final BtLeDevice.State state;
+        if (mDevice == null) {
+            state = BtLeDevice.State.DISCONNECTED;
         } else {
-            menu.findItem(R.id.menu_connect).setVisible(true);
-            menu.findItem(R.id.menu_disconnect).setVisible(false);
-            menu.findItem(R.id.menu_refresh).setActionView(null);
+            state = mDevice.getState();
+        }
+
+        switch (state) {
+            case DISCONNECTED:
+                menu.findItem(R.id.menu_connect).setVisible(true);
+                menu.findItem(R.id.menu_disconnect).setVisible(false);
+                menu.findItem(R.id.menu_refresh).setActionView(null);
+                break;
+            case READY:
+                menu.findItem(R.id.menu_connect).setVisible(false);
+                menu.findItem(R.id.menu_disconnect).setVisible(true);
+                menu.findItem(R.id.menu_refresh).setActionView(null);
+                break;
+            case CONNECTING:
+            case CONNECTED:
+            case DISCOVERING_SERVICE:
+                menu.findItem(R.id.menu_connect).setVisible(false);
+                menu.findItem(R.id.menu_disconnect).setVisible(true);
+                menu.findItem(R.id.menu_refresh).setActionView(
+                        R.layout.actionbar_indeterminate_progress);
+                break;
+            case DISCONNECTING:
+                menu.findItem(R.id.menu_connect).setVisible(true);
+                menu.findItem(R.id.menu_connect).setEnabled(false);
+                menu.findItem(R.id.menu_disconnect).setVisible(false);
+                menu.findItem(R.id.menu_refresh).setActionView(
+                        R.layout.actionbar_indeterminate_progress);
+                break;
+            default:
+                break;
         }
         return true;
     }
@@ -243,13 +270,20 @@ public class ShowDeviceActivity extends AppCompatActivity implements BtLeDevice.
 
 
     @Override
-    public void onDeviceStateChanged(BtLeDevice.State state) {
-        invalidateOptionsMenu();
-        if (state == BtLeDevice.State.READY) {
-            openButton.setEnabled(true);
-        } else {
-            openButton.setEnabled(false);
-        }
+    public void onDeviceStateChanged(final BtLeDevice.State state) {
+        Log.e(TAG, "new state: " + state);
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                invalidateOptionsMenu();
+                if (state == BtLeDevice.State.READY) {
+                    openButton.setEnabled(true);
+                } else {
+                    openButton.setEnabled(false);
+                }
+            }
+        });
     }
 
     @Override
