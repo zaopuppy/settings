@@ -98,4 +98,8 @@ public class TimerThreadExecutor {
 
         return future;
     }
+
+    public void submit(Runnable task) {
+        mExecutor.submit(task);
+    }
 }

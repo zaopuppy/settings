@@ -9,42 +9,41 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.example.zero.androidskeleton.ui.ShowDeviceActivity">
 
-    <Button
-        android:id="@+id/open_button"
+    <EditText
+        android:id="@+id/password_edit"
+        android:layout_marginTop="20dp"
+        android:layout_centerHorizontal="true"
+        android:layout_width="200sp"
+        android:layout_height="wrap_content"
+        android:inputType="numberPassword"
+        />
+
+    <ImageView
+        android:id="@+id/icon_mode_img"
+        android:layout_below="@id/password_edit"
+        android:layout_margin="40dp"
+        android:layout_width="180dp"
+        android:layout_height="180dp"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/icon_green_manual"
+        />
+
+    <ImageView
+        android:id="@+id/icon_hint_img"
+        android:layout_below="@id/icon_mode_img"
+        android:layout_margin="20dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/icon_click_r"
+        />
+
+    <TextView
+        android:layout_below="@id/icon_hint_img"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="20sp"
-        android:text="密码开门"/>
-
-    <Button
-        android:id="@+id/change_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="20sp"
-        android:layout_toEndOf="@id/open_button"
-        android:text="修改密码"/>
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="20sp"
-        android:layout_toEndOf="@id/change_button"
-        android:text="手机号开门"/>
-
-    <!--<Button-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:layout_toRightOf="@+id/open_button"-->
-        <!--android:text="xx"/>-->
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/open_button">
-        <TextView
-            android:id="@+id/device_detail"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-    </ScrollView>
+        android:layout_centerHorizontal="true"
+        android:text="输入密码后触摸解锁"
+        />
 
 </RelativeLayout>

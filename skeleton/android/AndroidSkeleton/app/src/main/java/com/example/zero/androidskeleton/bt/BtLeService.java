@@ -63,17 +63,37 @@ public class BtLeService {
                     wrappedDev = new BtLeDevice(dev);
                     mDeviceMap.put(key, wrappedDev);
                 } else {
-                    wrappedDev = mDeviceMap.get(key);
+                    wrappedDev = null;
                 }
             }
-            notifyDeviceFound(wrappedDev);
+            if (wrappedDev != null) {
+                notifyDeviceFound(wrappedDev);
+            }
         }
     };
 
+    private ScanListener[] getScanListenerCopy() {
+        synchronized (mScanListenerList) {
+            ScanListener[] list = new ScanListener[mScanListenerList.size()];
+            mScanListenerList.toArray(list);
+            return list;
+        }
+    }
+
     private void notifyDeviceFound(BtLeDevice dev) {
-        for (ScanListener l: mScanListenerList) {
+        for (ScanListener l: getScanListenerCopy()) {
             try {
                 l.onDeviceFound(dev);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+    }
+
+    private void notifyScanChanged(boolean scanning) {
+        for (ScanListener l: getScanListenerCopy()) {
+            try {
+                l.onScanChange(scanning);
             } catch (Exception e) {
                 // ignore
             }
@@ -102,7 +122,9 @@ public class BtLeService {
 
         @Override
         public void run() {
-            if (mSeqGen.last() == last) {
+            int current = mSeqGen.last();
+            Log.e(TAG, "saved=" + last + ", current=" + current);
+            if (current == last) {
                 stopScan();
             }
         }
@@ -113,7 +135,7 @@ public class BtLeService {
     public int startScan() {
         Log.e(TAG, "startScan");
         stopScan();
-        mScanning = true;
+        setScanning(true);
         getScanner().startScan(mScanCallback);
         mTimer.schedule(new ScanTimerTask(mSeqGen.next()), MAX_SCAN_TIME);
         return BtCode.OK;
@@ -121,8 +143,13 @@ public class BtLeService {
 
     public int stopScan() {
         getScanner().stopScan(mScanCallback);
-        mScanning = false;
+        setScanning(false);
         return BtCode.OK;
+    }
+
+    private void setScanning(boolean scanning) {
+        mScanning = scanning;
+        notifyScanChanged(scanning);
     }
 
     public boolean isScanning() {
@@ -132,11 +159,20 @@ public class BtLeService {
     private final ConcurrentLinkedQueue<ScanListener> mScanListenerList = new ConcurrentLinkedQueue<>();
 
     public void addScanListener(ScanListener l) {
-        mScanListenerList.add(l);
+        synchronized (mScanListenerList) {
+            mScanListenerList.add(l);
+        }
+        synchronized (mDeviceMap) {
+            for (Map.Entry<String, BtLeDevice> e: mDeviceMap.entrySet()) {
+                l.onDeviceFound(e.getValue());
+            }
+        }
     }
 
     public void removeScanListener(ScanListener l) {
-        mScanListenerList.remove(l);
+        synchronized (mScanListenerList) {
+            mScanListenerList.remove(l);
+        }
     }
 
     public void clearDevices() {

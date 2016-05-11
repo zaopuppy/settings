@@ -24,10 +24,9 @@ public class SequenceGenerator {
         last = current;
         if (current >= MAX) {
             current = 0;
-            return current;
+            return MAX;
         } else {
-            ++current;
-            return current;
+            return current++;
         }
     }
 

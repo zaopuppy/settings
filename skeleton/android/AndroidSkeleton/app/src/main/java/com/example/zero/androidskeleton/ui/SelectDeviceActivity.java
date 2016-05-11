@@ -108,32 +108,16 @@ public class SelectDeviceActivity extends AppCompatActivity {
         invalidateOptionsMenu();
     }
 
-    private Timer mTimer;
     @Override
     protected void onResume() {
         super.onResume();
+        mListViewAdapter.clear();
         BtLeService.INSTANCE.addScanListener(mScanListener);
-        mTimer = new Timer("le-scan-timer");
-        mTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (BtLeService.INSTANCE.isScanning()) {
-                            stopScan();
-                            startScan();
-                        }
-                    }
-                });
-            }
-        }, 0, 20*1000);
     }
 
     @Override
     protected void onPause() {
         BtLeService.INSTANCE.removeScanListener(mScanListener);
-        mTimer.cancel();
         stopScan();
         super.onPause();
     }
