@@ -68,6 +68,23 @@
     <output url="file://$PROJECT_DIR$/out" />
   </component>
   <component name="SvnBranchConfigurationManager">
+    <option name="myConfigurationMap">
+      <map>
+        <entry key="$PROJECT_DIR$/3rd/javaflow">
+          <value>
+            <SvnBranchConfiguration>
+              <option name="branchUrls">
+                <list>
+                  <option value="http://svn.apache.org/repos/asf/commons/sandbox/javaflow/branches" />
+                  <option value="http://svn.apache.org/repos/asf/commons/sandbox/javaflow/tags" />
+                </list>
+              </option>
+              <option name="trunkUrl" value="http://svn.apache.org/repos/asf/commons/sandbox/javaflow/trunk" />
+            </SvnBranchConfiguration>
+          </value>
+        </entry>
+      </map>
+    </option>
     <option name="mySupportsUserInfoFilter" value="true" />
   </component>
 </project>

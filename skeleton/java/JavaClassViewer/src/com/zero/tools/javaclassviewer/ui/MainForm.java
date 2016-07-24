@@ -1,36 +1,33 @@
 package com.zero.tools.javaclassviewer.ui;
 
+
 import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
-import org.objectweb.asm.*;
-import org.objectweb.asm.tree.*;
+import com.zero.tools.javaclassviewer.TestContinuation;
+import org.apache.commons.javaflow.Continuation;
+import org.apache.commons.javaflow.ContinuationClassLoader;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.analysis.*;
 import org.objectweb.asm.tree.analysis.Frame;
-import org.objectweb.asm.util.ASMifier;
 import org.objectweb.asm.util.Printer;
 import org.objectweb.asm.util.TraceClassVisitor;
 
 import javax.swing.*;
-import javax.swing.event.TreeModelEvent;
-import javax.swing.event.TreeModelListener;
-import javax.swing.event.TreeSelectionEvent;
-import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeModel;
-import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.dnd.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.net.URL;
 import java.util.Set;
 
 /**
@@ -133,9 +130,23 @@ public class MainForm extends JFrame {
 
         setDragAndDrop();
 
+        // --- FOR DEBUGGING ONLY ---
+        ContinuationClassLoader classLoader = new ContinuationClassLoader(new URL[]{}, java.lang.ClassLoader.getSystemClassLoader());
+        classLoader.setParentFirst(false);
+        try {
+            classLoader.loadClass("com.zero.tools.javaclassviewer.TestContinuation");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        // --- FOR DEBUGGING ONLY ---
         viewClassButton_.addActionListener((ActionEvent e) -> {
-            classInfoText_.setText("");
-            displayClassInfo(classPathText_.getText());
+            for (Continuation d = Continuation.startWith(new TestContinuation());
+                 d != null; d = Continuation.continueWith(d)) {
+                System.out.println("continue");
+            }
+            // displayClassInfo0("");
+            // classInfoText_.setText("");
+            // displayClassInfo(classPathText_.getText());
             // displayVMInfo();
         });
     }
@@ -159,6 +170,20 @@ public class MainForm extends JFrame {
 
     private void appendMessage(String msg) {
         classInfoText_.append(msg + '\n');
+    }
+
+    private void displayClassInfo0(String className) {
+        String classFileName = className.replace('.', '/');
+        InputStream inStream = ClassLoader.getSystemResourceAsStream(classFileName);
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
+            TraceClassVisitor visitor = new TraceClassVisitor(new PrintWriter(out));
+            ClassReader reader = new ClassReader(inStream);
+            reader.accept(visitor, 0);
+            showMessage(out.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void displayClassInfo(String classPath) {
@@ -189,7 +214,9 @@ public class MainForm extends JFrame {
                 classTree_.addTreeSelectionListener(e -> {
                     JTree val = (JTree) e.getSource();
                     DefaultMutableTreeNode node = (DefaultMutableTreeNode) val.getLastSelectedPathComponent();
-                    showMessage(node.getUserObject().toString());
+                    if (node != null) {
+                        showMessage(node.getUserObject().toString());
+                    }
                 });
                 for (MethodNode methodNode: (java.util.List<MethodNode>)classNode.methods) {
                     DefaultMutableTreeNode node = new DefaultMutableTreeNode(methodNode);
