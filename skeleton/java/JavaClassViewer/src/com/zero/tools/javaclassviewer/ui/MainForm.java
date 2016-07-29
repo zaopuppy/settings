@@ -131,22 +131,22 @@ public class MainForm extends JFrame {
         setDragAndDrop();
 
         // --- FOR DEBUGGING ONLY ---
-        ContinuationClassLoader classLoader = new ContinuationClassLoader(new URL[]{}, java.lang.ClassLoader.getSystemClassLoader());
-        classLoader.setParentFirst(false);
-        try {
-            classLoader.loadClass("com.zero.tools.javaclassviewer.TestContinuation");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
+        // ContinuationClassLoader classLoader = new ContinuationClassLoader(new URL[]{}, java.lang.ClassLoader.getSystemClassLoader());
+        // classLoader.setParentFirst(false);
+        // try {
+        //     classLoader.loadClass("com.zero.tools.javaclassviewer.TestContinuation");
+        // } catch (ClassNotFoundException e) {
+        //     e.printStackTrace();
+        // }
         // --- FOR DEBUGGING ONLY ---
         viewClassButton_.addActionListener((ActionEvent e) -> {
-            for (Continuation d = Continuation.startWith(new TestContinuation());
-                 d != null; d = Continuation.continueWith(d)) {
-                System.out.println("continue");
-            }
-            // displayClassInfo0("");
-            // classInfoText_.setText("");
-            // displayClassInfo(classPathText_.getText());
+            // for (Continuation d = Continuation.startWith(new TestContinuation());
+            //      d != null; d = Continuation.continueWith(d)) {
+            //     System.out.println("continue");
+            // }
+            // displayClassInfo0(classPathText_.getText());
+            classInfoText_.setText("");
+            displayClassInfo(classPathText_.getText());
             // displayVMInfo();
         });
     }
@@ -165,6 +165,7 @@ public class MainForm extends JFrame {
     }
 
     private void showMessage(String msg) {
+        System.out.println("showMessage");
         classInfoText_.setText(msg);
     }
 
@@ -200,31 +201,31 @@ public class MainForm extends JFrame {
             }
 
             // check frames for all methods
-            {
-                ClassNode classNode = new ClassNode();
-                ClassReader reader =
-                    new ClassReader(new BufferedInputStream(new FileInputStream(classPath)));
-                reader.accept(classNode, 0);
-
-                DefaultMutableTreeNode root = new DefaultMutableTreeNode(classNode);
-                DefaultTreeModel model = new DefaultTreeModel(root);
-                classTree_.setModel(model);
-                classTree_.setCellRenderer(new MyTreeCellRenderer());
-                classTree_.setShowsRootHandles(true);
-                classTree_.addTreeSelectionListener(e -> {
-                    JTree val = (JTree) e.getSource();
-                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) val.getLastSelectedPathComponent();
-                    if (node != null) {
-                        showMessage(node.getUserObject().toString());
-                    }
-                });
-                for (MethodNode methodNode: (java.util.List<MethodNode>)classNode.methods) {
-                    DefaultMutableTreeNode node = new DefaultMutableTreeNode(methodNode);
-                    model.insertNodeInto(node, root, root.getChildCount());
-                    analyseMethod(classNode, methodNode);
-                }
-                classTree_.invalidate();
-            }
+            // {
+            //     ClassNode classNode = new ClassNode();
+            //     ClassReader reader =
+            //         new ClassReader(new BufferedInputStream(new FileInputStream(classPath)));
+            //     reader.accept(classNode, 0);
+            //
+            //     DefaultMutableTreeNode root = new DefaultMutableTreeNode(classNode);
+            //     DefaultTreeModel model = new DefaultTreeModel(root);
+            //     classTree_.setModel(model);
+            //     classTree_.setCellRenderer(new MyTreeCellRenderer());
+            //     classTree_.setShowsRootHandles(true);
+            //     classTree_.addTreeSelectionListener(e -> {
+            //         JTree val = (JTree) e.getSource();
+            //         DefaultMutableTreeNode node = (DefaultMutableTreeNode) val.getLastSelectedPathComponent();
+            //         if (node != null) {
+            //             showMessage(node.getUserObject().toString());
+            //         }
+            //     });
+            //     for (MethodNode methodNode: (java.util.List<MethodNode>)classNode.methods) {
+            //         DefaultMutableTreeNode node = new DefaultMutableTreeNode(methodNode);
+            //         model.insertNodeInto(node, root, root.getChildCount());
+            //         analyseMethod(classNode, methodNode);
+            //     }
+            //     classTree_.invalidate();
+            // }
         } catch (IOException e) {
             e.printStackTrace();
         }

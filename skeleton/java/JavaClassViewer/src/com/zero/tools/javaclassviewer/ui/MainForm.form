@@ -15,7 +15,7 @@
           </grid>
         </constraints>
         <properties>
-          <text value="/Volumes/Data/source/settings/skeleton/java/JavaClassViewer/out/production/JavaClassViewer/com/zero/tools/javaclassviewer/Main.class"/>
+          <text value="/Users/zhaoyi/source/settings/skeleton/java/JavaClassViewer/out/production/JavaClassViewer/com/zero/tools/javaclassviewer/TestContinuation.class"/>
           <toolTipText value="drag and drop file to here"/>
         </properties>
       </component>
